@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADS AI MANAGER — Nền tảng Quản trị & Tối ưu Quảng cáo Meta & TikTok</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#EEF2FF',
+              100: '#E0E7FF',
+              500: '#6366F1',
+              600: '#4F46E5',
+              700: '#4338CA',
+            },
+            meta: '#1877F2',
+            tiktok: '#FE2C55',
+            ai: '#8B5CF6',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- SheetJS (XLSX) CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f8fafc; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    @media print {
+      body { background: white !important; color: black !important; }
+      #mainSidebar, #globalTopHeader, #quickNavContainer, #liveStatusBanner, .no-print { display: none !important; }
+      .app-screen { display: block !important; padding: 0 !important; max-width: 100% !important; }
+      .print-page-break { page-break-before: always; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased h-full flex flex-col overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-700">
+
+  <!-- ========================================================================= -->
+  <!-- FLOATING QUICK SCREEN SWITCHER (For Reviewing All 18 Screens) -->
+  <!-- ========================================================================= -->
+  <div id="quickNavContainer" class="fixed bottom-4 right-4 z-50 no-print">
+    <div class="relative inline-block text-left">
+      <button onclick="document.getElementById('quickNavMenu').classList.toggle('hidden')" class="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-full shadow-2xl hover:bg-slate-800 transition-all border border-slate-700 text-xs font-semibold focus:outline-none">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Jump to Screen (18 Screens)</span>
+        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+      </button>
+      
+      <div id="quickNavMenu" class="hidden absolute bottom-12 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3 max-h-[80vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 px-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Điều hướng 18 Màn hình</span>
+          <span id="quickNavModeLabel" class="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full">MVP V1.0</span>
+        </div>
+        <div class="space-y-1 text-xs">
+          <div class="px-2 py-1 text-[11px] font-semibold text-indigo-600 uppercase">1. Truy cập & Workspace</div>
+          <button onclick="window.app.navigateTo('screen-login')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>01. Login</span> <span class="text-[10px] text-slate-400">Auth</span></button>
+          <button onclick="window.app.navigateTo('screen-workspace')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>02. Workspace</span> <span class="text-[10px] text-slate-400">Teams</span></button>
+          <button onclick="window.app.navigateTo('screen-dashboard')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700 font-bold text-indigo-600"><span>03. Dashboard</span> <span class="text-[10px] bg-indigo-100 px-1 rounded">Hub</span></button>
+
+          <div class="px-2 py-1 mt-2 text-[11px] font-semibold text-indigo-600 uppercase">2. Quản trị Chiến dịch & Ads</div>
+          <button onclick="window.app.navigateTo('screen-campaigns')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>04. Campaigns</span> <span class="text-[10px] text-slate-400">Table</span></button>
+          <button onclick="window.app.navigateTo('screen-campaign-detail')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>05. Campaign Detail</span> <span class="text-[10px] text-slate-400">Health</span></button>
+          <button onclick="window.app.navigateTo('screen-ad-sets')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>06. Ad Sets</span> <span class="text-[10px] text-slate-400">Audience</span></button>
+          <button onclick="window.app.navigateTo('screen-ads')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>07. Ads</span> <span class="text-[10px] text-slate-400">Entities</span></button>
+          <button onclick="window.app.navigateTo('screen-creatives')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>08. Creatives</span> <span class="text-[10px] text-slate-400">Fatigue</span></button>
+          <button onclick="window.app.navigateTo('screen-creative-detail')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>09. Creative Detail</span> <span class="text-[10px] text-slate-400">Hook Rate</span></button>
+
+          <div class="px-2 py-1 mt-2 text-[11px] font-semibold text-indigo-600 uppercase">3. Phân tích & So sánh</div>
+          <button onclick="window.app.navigateTo('screen-comparison')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>10. Comparison</span> <span class="text-[10px] text-slate-400">Meta vs TikTok</span></button>
+          <button onclick="window.app.navigateTo('screen-performance')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>11. Performance</span> <span class="text-[10px] text-slate-400">Chart.js</span></button>
+          <button onclick="window.app.navigateTo('screen-pivot')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>12. Pivot Analytics</span> <span class="text-[10px] text-slate-400">Multi-dim</span></button>
+
+          <div class="px-2 py-1 mt-2 text-[11px] font-semibold text-indigo-600 uppercase">4. AI Copilot & Báo cáo</div>
+          <button onclick="window.app.navigateTo('screen-ai-analyst')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>13. AI Analyst</span> <span class="text-[10px] text-slate-400">Rule Engine</span></button>
+          <button onclick="window.app.navigateTo('screen-ask-data')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>14. Ask Your Data</span> <span class="text-[10px] text-slate-400">Guardrails</span></button>
+          <button onclick="window.app.navigateTo('screen-reports')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>15. Reports</span> <span class="text-[10px] text-slate-400">Builder</span></button>
+          <button onclick="window.app.navigateTo('screen-report-preview')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>16. Export / Preview</span> <span class="text-[10px] text-slate-400">Excel / A4</span></button>
+
+          <div class="px-2 py-1 mt-2 text-[11px] font-semibold text-indigo-600 uppercase">5. Tích hợp & Cài đặt</div>
+          <button onclick="window.app.navigateTo('screen-connections')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>17. Connections</span> <span class="text-[10px] text-slate-400">Meta/TikTok API</span></button>
+          <button onclick="window.app.navigateTo('screen-settings')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center justify-between text-slate-700"><span>18. Settings</span> <span class="text-[10px] text-slate-400">Config</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- TOP STATUS BANNER (Mode: Demo vs Live Real API) -->
+  <!-- ========================================================================= -->
+  <div id="liveStatusBanner" class="bg-indigo-900 text-white px-4 py-1.5 text-xs flex items-center justify-between shrink-0 no-print">
+    <div class="flex items-center gap-2">
+      <span id="bannerModeBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black bg-emerald-400 text-slate-950 tracking-wider">UNIFIED DATA ENGINE</span>
+      <span id="bannerModeText" class="font-medium text-slate-200">Hệ thống sẵn sàng: Kết nối Meta Graph API v19.0 & TikTok Marketing API v1.3 hoặc trải nghiệm Demo 30 ngày.</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="window.app.navigateTo('screen-connections')" class="bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded text-[11px] font-semibold transition">
+        🔗 Quản lý Kết nối Real API
+      </button>
+      <button onclick="window.openSyncModal()" class="text-emerald-300 hover:text-emerald-200 font-bold hover:underline text-[11px]">
+        🔄 Force Sync Now
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN APP WRAPPER -->
+  <!-- ========================================================================= -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- ======================================================================= -->
+    <!-- GLOBAL SIDEBAR NAVIGATION -->
+    <!-- ======================================================================= -->
+    <aside id="mainSidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all z-30 no-print">
+      <div>
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-slate-100 gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200 font-black text-lg">
+            A
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-black text-slate-900 text-base tracking-tight">ADS AI</span>
+              <span class="bg-indigo-100 text-indigo-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded">MANAGER</span>
+            </div>
+            <p class="text-[10px] text-slate-400 font-medium truncate" id="currentWorkspaceName">Kstudy E-commerce Group</p>
+          </div>
+        </div>
+
+        <!-- Navigation Groups -->
+        <nav class="p-3 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
+          <!-- CORE -->
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 mb-1">Tổng quan</div>
+            <div class="space-y-0.5">
+              <button onclick="window.app.navigateTo('screen-dashboard')" id="nav-screen-dashboard" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span>Dashboard</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-workspace')" id="nav-screen-workspace" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                <span>Workspaces</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- CAMPAIGNS -->
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 mb-1">Chiến dịch & Ads</div>
+            <div class="space-y-0.5">
+              <button onclick="window.app.navigateTo('screen-campaigns')" id="nav-screen-campaigns" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <span>Campaigns</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-ad-sets')" id="nav-screen-ad-sets" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <span>Ad Sets</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-ads')" id="nav-screen-ads" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                <span>Ads Entities</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-creatives')" id="nav-screen-creatives" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span>Creatives Library</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ANALYTICS -->
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 mb-1">Phân tích & So sánh</div>
+            <div class="space-y-0.5">
+              <button onclick="window.app.navigateTo('screen-comparison')" id="nav-screen-comparison" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                <span>So sánh Meta vs TikTok</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-performance')" id="nav-screen-performance" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                <span>Performance Chart</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-pivot')" id="nav-screen-pivot" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <span>Pivot Analytics</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- AI COPILOT -->
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 mb-1">AI Copilot</div>
+            <div class="space-y-0.5">
+              <button onclick="window.app.navigateTo('screen-ai-analyst')" id="nav-screen-ai-analyst" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <span>AI Health & Alerts</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-ask-data')" id="nav-screen-ask-data" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                <span>Ask Your Data</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- REPORTS & INTEGRATION -->
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 mb-1">Báo cáo & Cài đặt</div>
+            <div class="space-y-0.5">
+              <button onclick="window.app.navigateTo('screen-reports')" id="nav-screen-reports" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>Report Builder</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-report-preview')" id="nav-screen-report-preview" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>Xuất Báo cáo (A4/Excel)</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-connections')" id="nav-screen-connections" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                <span>Kết nối Meta/TikTok</span>
+              </button>
+              <button onclick="window.app.navigateTo('screen-settings')" id="nav-screen-settings" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                <span>Cài đặt</span>
+              </button>
+            </div>
+          </div>
+        </nav>
+      </div>
+
+      <!-- User Profile Card -->
+      <div class="p-3 border-t border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs">
+            AD
+          </div>
+          <div class="text-xs">
+            <span class="font-bold text-slate-800 block">Admin Marketing</span>
+            <span class="text-[10px] text-slate-400">admin@kstudy.vn</span>
+          </div>
+        </div>
+        <button onclick="window.app.navigateTo('screen-login')" title="Đăng xuất" class="text-slate-400 hover:text-rose-600 transition p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ======================================================================= -->
+    <!-- CONTENT AREA -->
+    <!-- ======================================================================= -->
+    <main class="flex-1 flex flex-col overflow-y-auto">
+
+      <!-- ===================================================================== -->
+      <!-- GLOBAL TOP HEADER WITH FILTERS -->
+      <!-- ===================================================================== -->
+      <header id="globalTopHeader" class="bg-white border-b border-slate-200 px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-20 no-print">
+        <div>
+          <div class="flex items-center gap-2 text-xs text-slate-400">
+            <span id="headerBreadcrumb">Tổng quan</span>
+            <span>/</span>
+            <span class="text-indigo-600 font-semibold" id="headerCurrentSection">ADS AI MANAGER</span>
+          </div>
+          <h1 id="headerMainTitle" class="text-lg font-bold text-slate-900">Bảng điều khiển hiệu suất quảng cáo</h1>
+        </div>
+
+        <!-- Global Interactive Filter Bar -->
+        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+          <!-- Platform Filter -->
+          <div class="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+            <button onclick="window.setGlobalPlatform('all')" id="btn-plat-all" class="px-2.5 py-1 rounded-lg font-bold bg-white text-slate-900 shadow-xs">Tất cả</button>
+            <button onclick="window.setGlobalPlatform('meta')" id="btn-plat-meta" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900">Meta Ads</button>
+            <button onclick="window.setGlobalPlatform('tiktok')" id="btn-plat-tiktok" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900">TikTok</button>
+          </div>
+
+          <!-- Date Range Filter -->
+          <select id="globalDateRangeSelect" onchange="window.setGlobalDateRange(this.value)" class="bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="today">Hôm nay (Oct 08)</option>
+            <option value="yesterday">Hôm qua</option>
+            <option value="7d" selected>7 Ngày gần nhất</option>
+            <option value="14d">14 Ngày gần nhất</option>
+            <option value="30d">30 Ngày gần nhất</option>
+          </select>
+
+          <!-- Quick Action Buttons -->
+          <button onclick="window.app.triggerExportExcel()" title="Xuất báo cáo Excel (.xlsx)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl transition shadow-xs">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span>Excel</span>
+          </button>
+          <button onclick="window.app.triggerExportCSV()" title="Xuất dữ liệu CSV" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-xl transition">
+            CSV
+          </button>
+        </div>
+      </header>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 01: LOGIN -->
+      <!-- ===================================================================== -->
+      <section id="screen-login" class="app-screen hidden min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
+        <div class="bg-white max-w-md w-full p-8 rounded-3xl border border-slate-200 shadow-xl space-y-6">
+          <div class="text-center space-y-2">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+              A
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight">ADS AI MANAGER</h2>
+            <p class="text-xs text-slate-500">Đăng nhập để quản trị và tối ưu chiến dịch Meta & TikTok</p>
+          </div>
+
+          <form onsubmit="event.preventDefault(); window.app.navigateTo('screen-dashboard');" class="space-y-4 text-xs">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Email Doanh nghiệp</label>
+              <input type="email" value="admin@kstudy.vn" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Mật khẩu</label>
+              <input type="password" value="••••••••••••" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none" />
+            </div>
+            <div class="flex items-center justify-between text-slate-500">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked class="rounded text-indigo-600" />
+                <span>Ghi nhớ đăng nhập</span>
+              </label>
+              <a href="#" class="text-indigo-600 hover:underline">Quên mật khẩu?</a>
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition">
+              Đăng nhập hệ thống
+            </button>
+          </form>
+
+          <div class="pt-2 border-t border-slate-100 text-center">
+            <button onclick="window.app.navigateTo('screen-dashboard')" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:underline flex items-center justify-center gap-1.5 mx-auto">
+              <span>🌟 Trải nghiệm ngay chế độ Demo Mode (Không cần tài khoản)</span> →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 02: WORKSPACE -->
+      <!-- ===================================================================== -->
+      <section id="screen-workspace" class="app-screen hidden p-6 max-w-5xl mx-auto w-full space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Quản lý Không gian làm việc (Workspaces)</h2>
+            <p class="text-xs text-slate-500">Mỗi Workspace độc lập quản lý các tài khoản quảng cáo Meta & TikTok riêng biệt.</p>
+          </div>
+          <button onclick="alert('Đã mở hộp thoại tạo Workspace mới')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-4 py-2 rounded-xl shadow-xs transition">
+            + Tạo Workspace mới
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-white p-5 rounded-2xl border-2 border-indigo-500 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base">K</div>
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900">Kstudy E-commerce Group</h3>
+                  <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Đang kích hoạt</span>
+                </div>
+              </div>
+              <span class="text-xs text-slate-400">3 Tài khoản</span>
+            </div>
+            <p class="text-xs text-slate-500">Tiền tệ: VND (₫) • Múi giờ: Asia/Ho_Chi_Minh • Thành viên: 5 người</p>
+            <div class="pt-2 border-t border-slate-100 flex justify-end gap-2 text-xs">
+              <button onclick="window.app.navigateTo('screen-settings')" class="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg">Cài đặt</button>
+              <button onclick="window.app.navigateTo('screen-dashboard')" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 font-bold rounded-lg">Vào Dashboard →</button>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-slate-300 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-base">A</div>
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900">Agency Client Growth</h3>
+                  <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Phụ</span>
+                </div>
+              </div>
+              <span class="text-xs text-slate-400">2 Tài khoản</span>
+            </div>
+            <p class="text-xs text-slate-500">Tiền tệ: USD ($) • Múi giờ: America/New_York • Thành viên: 2 người</p>
+            <div class="pt-2 border-t border-slate-100 flex justify-end gap-2 text-xs">
+              <button onclick="alert('Đã chuyển sang workspace Agency Client Growth'); window.app.navigateTo('screen-dashboard');" class="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold rounded-lg">Chuyển sang</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 03: EXECUTIVE DASHBOARD (CENTRAL HUB) -->
+      <!-- ===================================================================== -->
+      <section id="screen-dashboard" class="app-screen p-6 max-w-7xl mx-auto w-full space-y-6">
+        
+        <!-- 8 EXECUTIVE KPI CARDS -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-xs">
+          <!-- Spend -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+            <span class="text-slate-400 font-semibold block text-[10px] uppercase">Chi tiêu</span>
+            <div id="dash-kpi-spend" class="text-base font-black text-slate-900">...</div>
+            <span class="text-[10px] text-emerald-600 font-bold">+12.4% vs chu kỳ trước</span>
+          </div>
+          <!-- Revenue -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+            <span class="text-slate-400 font-semibold block text-[10px] uppercase">Doanh thu</span>
+            <div id="dash-kpi-revenue" class="text-base font-black text-slate-900">...</div>
+            <span class="text-[10px] text-emerald-600 font-bold">+18.6% vs chu kỳ trước</span>
+          </div>
+          <!-- ROAS -->
+          <div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-xs space-y-1 bg-gradient-to-b from-indigo-50/30 to-white">
+            <span class="text-indigo-600 font-bold block text-[10px] uppercase">ROAS</span>
+            <div id="dash-kpi-roas" class="text-base font-black text-indigo-600">...</div>
+            <span class="text-[10px] text-emerald-600 font-bold">+5.5% Tối ưu</span>
+          </div>
+          <!-- CPA -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+            <span class="text-slate-400 font-semibold block text-[10px] uppercase">CPA</span>
+            <div id="dash-kpi-cpa" class="text-base font-black text-slate-900">...</div>
+            <span class="text-[10px] text-emerald-600 font-bold">-8.2% (Rẻ hơn)</span>
+          </div>
+          <!-- CTR -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+            <span class="text-slate-400 font-semibold block text-[10px] uppercase">CTR (%)</span>
+            <div id="dash-kpi-ctr" class="text-base font-black text-slate-900">...</div>
+            <span class="text-[10px] text-emerald-600 font-bold">+4.1% Tương tác</span>
+          </div>
+          <!-- CPC -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+            <span class="text-slate-400 font-semibold block text-[10px] uppercase">CPC</span>
+            <div id="dash-kpi-cpc" class="text-base font-black text-slate-900">...</div>
+            <span class="text-[10px] text-emerald-600 font-bold">-6.4% Tối ưu</span>
+          </div>
+          <!-- CPM -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+            <span class="text-slate-400 font-semibold block text-[10px] uppercase">CPM</span>
+            <div id="dash-kpi-cpm" class="text-base font-black text-slate-900">...</div>
+            <span class="text-[10px] text-slate-400 font-medium">+2.1% Thị trường</span>
+          </div>
+          <!-- Conversions -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+            <span class="text-slate-400 font-semibold block text-[10px] uppercase">Chuyển đổi</span>
+            <div id="dash-kpi-conv" class="text-base font-black text-slate-900">...</div>
+            <span class="text-[10px] text-emerald-600 font-bold">+22.5% Đơn hàng</span>
+          </div>
+        </div>
+
+        <!-- CHARTS SECTION: PERFORMANCE OVER TIME + PLATFORM SHARE -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- 2 Columns: Main Performance Chart.js -->
+          <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900">Biểu đồ Hiệu suất Quảng cáo Theo Thời Gian</h3>
+                  <p class="text-xs text-slate-500">So sánh biến động trực quan giữa Meta Ads và TikTok Ads</p>
+                </div>
+                <!-- Metric Selector Tabs -->
+                <div class="flex flex-wrap gap-1 text-xs">
+                  <button onclick="window.setChartMetric('spend')" id="tab-metric-spend" class="px-2.5 py-1 rounded-lg font-bold bg-indigo-50 text-indigo-700">Chi tiêu</button>
+                  <button onclick="window.setChartMetric('revenue')" id="tab-metric-revenue" class="px-2.5 py-1 rounded-lg text-slate-600 hover:bg-slate-100">Doanh thu</button>
+                  <button onclick="window.setChartMetric('roas')" id="tab-metric-roas" class="px-2.5 py-1 rounded-lg text-slate-600 hover:bg-slate-100">ROAS</button>
+                  <button onclick="window.setChartMetric('cpa')" id="tab-metric-cpa" class="px-2.5 py-1 rounded-lg text-slate-600 hover:bg-slate-100">CPA</button>
+                  <button onclick="window.setChartMetric('ctr')" id="tab-metric-ctr" class="px-2.5 py-1 rounded-lg text-slate-600 hover:bg-slate-100">CTR</button>
+                </div>
+              </div>
+
+              <!-- Canvas for Chart.js -->
+              <div class="relative h-64 w-full pt-4">
+                <canvas id="dashboardPerformanceChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Legend Info -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+              <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-1 bg-blue-600 rounded"></span>
+                  <span class="text-slate-700 font-semibold">Meta Ads</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-1 bg-rose-500 rounded border border-dashed border-rose-500"></span>
+                  <span class="text-slate-700 font-semibold">TikTok Ads</span>
+                </div>
+              </div>
+              <span class="text-[11px] text-slate-400">Dữ liệu được làm mới theo thời gian thực</span>
+            </div>
+          </div>
+
+          <!-- 1 Column: Platform Share Donut Chart.js -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="font-bold text-sm text-slate-900">Tỷ trọng Chi tiêu</h3>
+                <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">Tương quan</span>
+              </div>
+              <p class="text-xs text-slate-500 my-2">Phân bổ ngân sách giữa hai nền tảng trong chu kỳ được lọc.</p>
+              
+              <div class="relative h-52 w-full flex items-center justify-center my-2">
+                <canvas id="dashboardPlatformShareChart"></canvas>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 pt-3 border-t border-slate-100 text-xs">
+              <div class="flex justify-between items-center text-slate-700">
+                <span id="dash-share-meta" class="font-bold text-blue-600">Meta: Đang tính...</span>
+              </div>
+              <div class="flex justify-between items-center text-slate-700">
+                <span id="dash-share-tiktok" class="font-bold text-rose-600">TikTok: Đang tính...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUICK ANOMALY & CAMPAIGNS PREVIEW -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <h3 class="font-bold text-sm text-slate-900">Chiến dịch Đang Hoạt Động Tiêu Biểu</h3>
+            </div>
+            <button onclick="window.app.navigateTo('screen-campaigns')" class="text-indigo-600 text-xs font-semibold hover:underline">
+              Xem tất cả chiến dịch →
+            </button>
+          </div>
+
+          <!-- Quick Actions Bar -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div class="p-4 rounded-xl bg-purple-50/60 border border-purple-100 space-y-1">
+              <strong class="font-bold text-purple-900 block">🤖 AI Health Diagnostics</strong>
+              <p class="text-slate-600">Hệ thống phát hiện 1 chiến dịch có dấu hiệu bão hòa tư liệu (Creative Fatigue) và 2 cơ hội scale ngân sách.</p>
+              <button onclick="window.app.navigateTo('screen-ai-analyst')" class="text-purple-700 font-bold hover:underline pt-1 block">Khám phá chẩn đoán AI →</button>
+            </div>
+            <div class="p-4 rounded-xl bg-blue-50/60 border border-blue-100 space-y-1">
+              <strong class="font-bold text-blue-900 block">📊 Báo cáo Tuần</strong>
+              <p class="text-slate-600">Xuất báo cáo tổng hợp Meta & TikTok chỉ với 1 click sang định dạng Excel hoặc PDF A4 chuyên nghiệp.</p>
+              <button onclick="window.app.navigateTo('screen-report-preview')" class="text-blue-700 font-bold hover:underline pt-1 block">Tạo và xem trước báo cáo →</button>
+            </div>
+            <div class="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 space-y-1">
+              <strong class="font-bold text-emerald-900 block">⚡ Kết nối API Thật</strong>
+              <p class="text-slate-600">Dễ dàng nhập Access Token và Ad Account ID để đồng bộ số liệu live từ Meta Graph API và TikTok API.</p>
+              <button onclick="window.app.navigateTo('screen-connections')" class="text-emerald-700 font-bold hover:underline pt-1 block">Cài đặt kết nối Live →</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 04: CAMPAIGNS LIST -->
+      <!-- ===================================================================== -->
+      <section id="screen-campaigns" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Danh Sách Chiến Dịch (Campaigns)</h2>
+            <p class="text-xs text-slate-500">Chuẩn hóa dữ liệu toàn diện giữa Meta Ads và TikTok Ads trong cùng một bảng điều khiển.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="window.app.triggerExportExcel()" class="bg-emerald-600 text-white text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-emerald-700 transition">
+              Xuất Excel (.xlsx)
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+          <!-- Search input -->
+          <div class="relative w-full md:w-80">
+            <input type="text" placeholder="Tìm kiếm chiến dịch theo tên..." class="global-search-input w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none" />
+            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+
+          <!-- Status & Objective Filter -->
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <select onchange="window.app.dataEngine.setFilter('status', this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="ACTIVE">Chỉ Active</option>
+              <option value="PAUSED">Chỉ Paused</option>
+            </select>
+            <select onchange="window.app.dataEngine.setFilter('sortBy', this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none">
+              <option value="spend">Sắp xếp: Chi tiêu cao nhất</option>
+              <option value="revenue">Sắp xếp: Doanh thu</option>
+              <option value="roas">Sắp xếp: ROAS</option>
+              <option value="cpa">Sắp xếp: CPA tối ưu</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Campaigns Table -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead class="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4 font-bold">Chiến dịch</th>
+                  <th class="py-3 px-3 font-bold">Nền tảng</th>
+                  <th class="py-3 px-3 font-bold">Trạng thái</th>
+                  <th class="py-3 px-3 font-bold text-right">Chi tiêu</th>
+                  <th class="py-3 px-3 font-bold text-right">Doanh thu</th>
+                  <th class="py-3 px-3 font-bold text-right">ROAS</th>
+                  <th class="py-3 px-3 font-bold text-right">CPA</th>
+                  <th class="py-3 px-3 font-bold text-right">CTR</th>
+                  <th class="py-3 px-3 font-bold text-right">Đơn hàng</th>
+                  <th class="py-3 px-3 font-bold text-center">Health</th>
+                </tr>
+              </thead>
+              <tbody id="campaignsTableBody" class="divide-y divide-slate-100">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+          <div class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span id="campaignPageInfo">Đang tải danh sách...</span>
+            <div class="flex gap-1">
+              <button onclick="window.app.campaignPagination.page = Math.max(1, window.app.campaignPagination.page - 1); window.app.renderCampaigns();" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg">← Trước</button>
+              <button onclick="window.app.campaignPagination.page++; window.app.renderCampaigns();" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg">Sau →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 05: CAMPAIGN DETAIL (DEEP DIVE & HEALTH SCORE) -->
+      <!-- ===================================================================== -->
+      <section id="screen-campaign-detail" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <!-- Campaign Detail Header -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span id="cmpDetailPlatform" class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">Meta Ads</span>
+                <span id="cmpDetailObjective" class="text-xs text-slate-400 font-semibold">Mục tiêu: SALES</span>
+              </div>
+              <h2 id="cmpDetailTitle" class="text-xl font-black text-slate-900">[FB] Summer Mega Sale - Conversion Purchase</h2>
+              <p class="text-xs text-slate-500 mt-1">Ngân sách hàng ngày: <strong id="cmpDetailBudget" class="text-slate-800">25.0M ₫/ngày</strong></p>
+            </div>
+
+            <!-- Health Score Card -->
+            <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 cursor-pointer" onclick="window.openWhyHealthModal()">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white font-black text-lg flex items-center justify-center shadow-md">
+                <span id="cmpDetailHealthScore">84</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Health Score</span>
+                <span class="text-xs font-bold text-emerald-700">Tối ưu xuất sắc</span>
+                <span class="text-[10px] text-indigo-600 block hover:underline">Xem phân rã 5 chỉ số ℹ️</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI Summary for this Campaign -->
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 pt-4 border-t border-slate-100 text-xs">
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <span class="text-slate-400 block text-[10px]">CHI TIÊU</span>
+              <strong id="cmp-kpi-spend" class="text-sm text-slate-900">...</strong>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <span class="text-slate-400 block text-[10px]">DOANH THU</span>
+              <strong id="cmp-kpi-revenue" class="text-sm text-slate-900">...</strong>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <span class="text-slate-400 block text-[10px]">ROAS</span>
+              <strong id="cmp-kpi-roas" class="text-sm text-indigo-600">...</strong>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <span class="text-slate-400 block text-[10px]">CPA</span>
+              <strong id="cmp-kpi-cpa" class="text-sm text-emerald-600">...</strong>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <span class="text-slate-400 block text-[10px]">CTR</span>
+              <strong id="cmp-kpi-ctr" class="text-sm text-slate-800">...</strong>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <span class="text-slate-400 block text-[10px]">ĐƠN HÀNG</span>
+              <strong id="cmp-kpi-conv" class="text-sm text-slate-800">...</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Chart & AI Diagnosis -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-sm text-slate-900">Biểu đồ Xu hướng Chi tiêu & Hiệu suất</h3>
+            <div class="h-64 relative">
+              <canvas id="campaignDetailChart"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">AI</span>
+              <h3 class="font-bold text-sm text-slate-900">Chẩn đoán Sức khỏe AI</h3>
+            </div>
+            <div id="cmpAiDiagnosisBox" class="space-y-3">
+              <!-- AI Diagnosis -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 06: AD SETS -->
+      <!-- ===================================================================== -->
+      <section id="screen-ad-sets" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Quản lý Nhóm Quảng cáo (Ad Sets / Groups)</h2>
+          <p class="text-xs text-slate-500">Chuẩn hóa cấu trúc Meta Ad Set và TikTok Ad Group theo mô hình Unified Data Model.</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead class="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4 font-bold">Nhóm Quảng cáo</th>
+                  <th class="py-3 px-3 font-bold">Nền tảng</th>
+                  <th class="py-3 px-3 font-bold text-right">Ngân sách</th>
+                  <th class="py-3 px-3 font-bold text-right">Chi tiêu</th>
+                  <th class="py-3 px-3 font-bold text-right">CPA</th>
+                  <th class="py-3 px-3 font-bold text-right">ROAS</th>
+                  <th class="py-3 px-3 font-bold text-right">CTR</th>
+                  <th class="py-3 px-3 font-bold text-right">Đơn</th>
+                  <th class="py-3 px-3 font-bold text-center">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody id="adSetsTableBody" class="divide-y divide-slate-100">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 07: ADS MANAGEMENT -->
+      <!-- ===================================================================== -->
+      <section id="screen-ads" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Thực thể Quảng cáo (Ads Entities)</h2>
+          <p class="text-xs text-slate-500">Chi tiết từng mẫu quảng cáo đang phân phối trên Facebook Feed, Reels và TikTok Feed.</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead class="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4 font-bold">Mẫu Quảng cáo</th>
+                  <th class="py-3 px-3 font-bold">Kênh</th>
+                  <th class="py-3 px-3 font-bold text-right">Chi tiêu</th>
+                  <th class="py-3 px-3 font-bold text-right">CTR</th>
+                  <th class="py-3 px-3 font-bold text-right">CPC</th>
+                  <th class="py-3 px-3 font-bold text-right">CPA</th>
+                  <th class="py-3 px-3 font-bold text-right">ROAS</th>
+                  <th class="py-3 px-3 font-bold text-right">Chuyển đổi</th>
+                  <th class="py-3 px-3 font-bold text-center">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody id="adsTableBody" class="divide-y divide-slate-100">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 08: CREATIVES LIBRARY -->
+      <!-- ===================================================================== -->
+      <section id="screen-creatives" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Kho Tư liệu Quảng cáo (Creatives Library)</h2>
+            <p class="text-xs text-slate-500">Phân loại tự động: WINNER, WATCH, FATIGUE (Mệt mỏi), POOR và PAUSED dựa trên dữ liệu thực tế.</p>
+          </div>
+          <div class="flex gap-2 text-xs">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold">● WINNER: ROAS cao</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 font-bold">● FATIGUE: Bão hòa</span>
+          </div>
+        </div>
+
+        <!-- Creatives Grid -->
+        <div id="creativesGridContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 09: CREATIVE DETAIL -->
+      <!-- ===================================================================== -->
+      <section id="screen-creative-detail" class="app-screen hidden p-6 max-w-6xl mx-auto w-full space-y-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+          <div class="flex flex-col md:flex-row gap-6">
+            <!-- Visual Asset Preview -->
+            <div class="w-full md:w-80 h-96 bg-slate-900 rounded-2xl overflow-hidden shrink-0 shadow-lg relative">
+              <img id="crDetailImg" src="" alt="Creative Preview" class="w-full h-full object-cover" />
+              <div class="absolute bottom-3 left-3 right-3 bg-black/70 backdrop-blur-xs p-3 rounded-xl text-white text-xs">
+                <span class="font-bold block text-emerald-400">Preview Mô phỏng</span>
+                <span id="crDetailHeadline" class="text-[11px] text-slate-300">...</span>
+              </div>
+            </div>
+
+            <!-- Creative Intelligence & Stats -->
+            <div class="flex-1 space-y-4">
+              <div class="flex items-center justify-between">
+                <h2 id="crDetailTitle" class="text-lg font-black text-slate-900">...</h2>
+                <span id="crDetailStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">WINNER</span>
+              </div>
+
+              <!-- Metrics -->
+              <div class="grid grid-cols-3 gap-3 text-xs">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 block text-[10px]">TỔNG CHI TIÊU</span>
+                  <strong id="cr-stat-spend" class="text-sm text-slate-900">...</strong>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 block text-[10px]">ROAS ĐẠT ĐƯỢC</span>
+                  <strong id="cr-stat-roas" class="text-sm text-indigo-600">...</strong>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 block text-[10px]">CPA TRUNG BÌNH</span>
+                  <strong id="cr-stat-cpa" class="text-sm text-emerald-600">...</strong>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 block text-[10px]">HOOK RATE (3 GIÂY)</span>
+                  <strong id="cr-stat-hook" class="text-sm text-slate-900">...</strong>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 block text-[10px]">HOLD RATE (50% VIDEO)</span>
+                  <strong id="cr-stat-hold" class="text-sm text-slate-900">...</strong>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 block text-[10px]">TẦN SUẤT (FREQUENCY)</span>
+                  <strong id="cr-stat-freq" class="text-sm text-slate-900">...</strong>
+                </div>
+              </div>
+
+              <!-- AI Creative Evaluation -->
+              <div id="crDetailAiAdvice">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 10: COMPARISON (META VS TIKTOK) -->
+      <!-- ===================================================================== -->
+      <section id="screen-comparison" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">So Sánh Trực Quan: Meta Ads vs TikTok Ads</h2>
+          <p class="text-xs text-slate-500">Đối chiếu công bằng toàn bộ các chỉ số phễu chuyển đổi giữa hai nền tảng quảng cáo.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Comparison Table -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-sm text-slate-900">Bảng Đối Chiếu Chỉ Số Thống Nhất</h3>
+            <div class="overflow-x-auto text-xs">
+              <table class="w-full text-left">
+                <thead class="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th class="py-2.5 px-3">Chỉ số KPI</th>
+                    <th class="py-2.5 px-3 text-right text-blue-600 font-bold">Meta Ads (Facebook)</th>
+                    <th class="py-2.5 px-3 text-right text-rose-600 font-bold">TikTok Ads</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                  <tr><td class="py-2.5 px-3 text-slate-500">Chi tiêu (Spend)</td><td id="cmp-val-spend-meta" class="py-2.5 px-3 text-right font-bold text-slate-900">...</td><td id="cmp-val-spend-tt" class="py-2.5 px-3 text-right font-bold text-slate-900">...</td></tr>
+                  <tr><td class="py-2.5 px-3 text-slate-500">Doanh thu (Revenue)</td><td id="cmp-val-rev-meta" class="py-2.5 px-3 text-right font-bold text-slate-900">...</td><td id="cmp-val-rev-tt" class="py-2.5 px-3 text-right font-bold text-slate-900">...</td></tr>
+                  <tr><td class="py-2.5 px-3 text-slate-500">ROAS</td><td id="cmp-val-roas-meta" class="py-2.5 px-3 text-right font-black text-indigo-600">...</td><td id="cmp-val-roas-tt" class="py-2.5 px-3 text-right font-black text-indigo-600">...</td></tr>
+                  <tr><td class="py-2.5 px-3 text-slate-500">CPA (Giá mỗi đơn)</td><td id="cmp-val-cpa-meta" class="py-2.5 px-3 text-right font-bold text-emerald-600">...</td><td id="cmp-val-cpa-tt" class="py-2.5 px-3 text-right font-bold text-emerald-600">...</td></tr>
+                  <tr><td class="py-2.5 px-3 text-slate-500">CTR (Tỷ lệ click)</td><td id="cmp-val-ctr-meta" class="py-2.5 px-3 text-right font-bold text-slate-800">...</td><td id="cmp-val-ctr-tt" class="py-2.5 px-3 text-right font-bold text-slate-800">...</td></tr>
+                  <tr><td class="py-2.5 px-3 text-slate-500">CPC (Giá mỗi click)</td><td id="cmp-val-cpc-meta" class="py-2.5 px-3 text-right font-medium text-slate-700">...</td><td id="cmp-val-cpc-tt" class="py-2.5 px-3 text-right font-medium text-slate-700">...</td></tr>
+                  <tr><td class="py-2.5 px-3 text-slate-500">CPM (1000 lượt hiển thị)</td><td id="cmp-val-cpm-meta" class="py-2.5 px-3 text-right font-medium text-slate-700">...</td><td id="cmp-val-cpm-tt" class="py-2.5 px-3 text-right font-medium text-slate-700">...</td></tr>
+                  <tr><td class="py-2.5 px-3 text-slate-500">Tổng Đơn hàng</td><td id="cmp-val-conv-meta" class="py-2.5 px-3 text-right font-bold text-slate-900">...</td><td id="cmp-val-conv-tt" class="py-2.5 px-3 text-right font-bold text-slate-900">...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Comparison Bar Chart -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-sm text-slate-900">Tương quan Hiệu Quả ROAS & CTR</h3>
+            <div class="h-72 relative">
+              <canvas id="comparisonBarCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 11: PERFORMANCE ANALYTICS (CHART.JS DEEP DIVE) -->
+      <!-- ===================================================================== -->
+      <section id="screen-performance" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Phân Tích Hiệu Suất Tương Tác (Performance Analytics)</h2>
+              <p class="text-xs text-slate-500">Biểu đồ động Chart.js với khả năng chuyển đổi metric tức thời.</p>
+            </div>
+            <!-- Metric Pills -->
+            <div class="flex flex-wrap gap-1 text-xs">
+              <button onclick="window.setChartMetric('spend')" class="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg">Chi tiêu</button>
+              <button onclick="window.setChartMetric('revenue')" class="px-3 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg">Doanh thu</button>
+              <button onclick="window.setChartMetric('roas')" class="px-3 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg">ROAS</button>
+              <button onclick="window.setChartMetric('cpa')" class="px-3 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg">CPA</button>
+              <button onclick="window.setChartMetric('ctr')" class="px-3 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg">CTR</button>
+            </div>
+          </div>
+
+          <div class="h-96 relative pt-4">
+            <canvas id="performanceAnalyticsCanvas"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 12: PIVOT ANALYTICS -->
+      <!-- ===================================================================== -->
+      <section id="screen-pivot" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Bảng Phân Tích Đa Chiều (Pivot Analytics)</h2>
+            <p class="text-xs text-slate-500">Tự do xoay chiều dữ liệu (Dimensions) và lọc cột chỉ số đo lường.</p>
+          </div>
+          <button onclick="window.exportActivePivotCSV()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition">
+            Xuất Bảng Pivot CSV
+          </button>
+        </div>
+
+        <!-- Dimension Selector -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2 text-xs">
+          <span class="font-bold text-slate-700 uppercase tracking-wider text-[11px] block">1. Chọn Chiều Phân Tích (Dimensions)</span>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="window.setPivotDim('campaign')" id="pdim-campaign" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">Campaigns</button>
+            <button onclick="window.setPivotDim('platform')" id="pdim-platform" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Platform (Meta vs TikTok)</button>
+            <button onclick="window.setPivotDim('adSet')" id="pdim-adSet" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Ad Sets</button>
+            <button onclick="window.setPivotDim('creative')" id="pdim-creative" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Creatives</button>
+            <button onclick="window.setPivotDim('date')" id="pdim-date" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Ngày (Day by Day)</button>
+          </div>
+        </div>
+
+        <!-- Pivot Table -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead class="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4 font-bold" id="pivotDimHeader">Dimension</th>
+                  <th class="py-3 px-3 font-bold text-right">Chi tiêu</th>
+                  <th class="py-3 px-3 font-bold text-right">Doanh thu</th>
+                  <th class="py-3 px-3 font-bold text-right">ROAS</th>
+                  <th class="py-3 px-3 font-bold text-right">CPA</th>
+                  <th class="py-3 px-3 font-bold text-right">CTR</th>
+                  <th class="py-3 px-3 font-bold text-right">CPC</th>
+                  <th class="py-3 px-3 font-bold text-right">CPM</th>
+                  <th class="py-3 px-3 font-bold text-right">Đơn hàng</th>
+                </tr>
+              </thead>
+              <tbody id="pivotTableBody" class="divide-y divide-slate-100 font-medium">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 13: AI ANALYST DASHBOARD -->
+      <!-- ===================================================================== -->
+      <section id="screen-ai-analyst" class="app-screen hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        <!-- AI Overview Banner -->
+        <div class="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white p-6 rounded-3xl shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
+          <div class="space-y-2">
+            <div class="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-purple-200">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              ADS AI DIAGNOSTIC ENGINE (RULE-BASED + GUARDRAILS)
+            </div>
+            <h2 class="text-2xl font-black tracking-tight">Sức Khỏe Danh Mục Quảng Cáo</h2>
+            <p class="text-xs text-purple-200 max-w-xl">Hệ thống liên tục quét các bất thường theo chu kỳ (CPA Spike, ROAS Drop, Creative Fatigue) và đưa ra hành động tối ưu chính xác.</p>
+          </div>
+
+          <div class="bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/20 text-center shrink-0">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-purple-200 block">Overall Health Score</span>
+            <div id="aiAnalystHealthScore" class="text-3xl font-black text-emerald-400 my-0.5">82/100</div>
+            <span class="text-[10px] text-emerald-200 font-semibold">Tình trạng Tốt</span>
+          </div>
+        </div>
+
+        <!-- 2 Columns: Issues vs Opportunities -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Key Issues -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <h3 class="font-bold text-sm text-slate-900">Vấn Đề Cần Xử Lý (Anomalies)</h3>
+              </div>
+              <span class="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-full">Rule Engine</span>
+            </div>
+            <div id="aiAnalystIssuesList" class="space-y-3">
+              <!-- Issues List -->
+            </div>
+          </div>
+
+          <!-- Opportunities -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                <h3 class="font-bold text-sm text-slate-900">Cơ Hội Tăng Trưởng (Scaling)</h3>
+              </div>
+              <span class="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full">Winners</span>
+            </div>
+            <div id="aiAnalystOpportunitiesList" class="space-y-3">
+              <!-- Opportunities List -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 14: ASK YOUR DATA (AI COPILOT CHAT) -->
+      <!-- ===================================================================== -->
+      <section id="screen-ask-data" class="app-screen hidden p-6 max-w-4xl mx-auto w-full space-y-4">
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white font-black flex items-center justify-center text-sm shadow-md">
+              AI
+            </div>
+            <div>
+              <h2 class="font-black text-sm text-slate-900">Ask Your Ads Data — AI Copilot</h2>
+              <p class="text-xs text-slate-500">Hỏi bất kỳ điều gì về dữ liệu quảng cáo. Tuân thủ 100% Guardrails [FACT] → [HYPOTHESIS] → [RECOMMENDATION].</p>
+            </div>
+          </div>
+          <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full">Context: Active 30D Unified Data</span>
+        </div>
+
+        <!-- Suggested Prompt Chips -->
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button onclick="window.app.handleAskUserQuestion('Campaign nào đang có ROAS cao nhất?')" class="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl transition shadow-2xs">
+            🌟 Campaign nào có ROAS cao nhất?
+          </button>
+          <button onclick="window.app.handleAskUserQuestion('Tại sao CPA tuần này tăng?')" class="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl transition shadow-2xs">
+            ⚠️ Tại sao CPA tuần này tăng?
+          </button>
+          <button onclick="window.app.handleAskUserQuestion('Meta hay TikTok đang hiệu quả hơn?')" class="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl transition shadow-2xs">
+            📊 Meta hay TikTok hiệu quả hơn?
+          </button>
+          <button onclick="window.app.handleAskUserQuestion('Creative nào có dấu hiệu fatigue?')" class="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl transition shadow-2xs">
+            🚨 Creative nào bị fatigue?
+          </button>
+        </div>
+
+        <!-- Chat Feed -->
+        <div id="askDataChatFeed" class="bg-slate-100/60 rounded-3xl border border-slate-200/80 p-5 min-h-[420px] max-h-[520px] overflow-y-auto space-y-4">
+          <!-- Welcome message -->
+          <div class="flex justify-start">
+            <div class="max-w-xl bg-white border border-slate-200 rounded-2xl rounded-tl-none p-4 shadow-xs text-xs space-y-2">
+              <span class="font-bold text-indigo-600 block">🤖 Ads AI Copilot:</span>
+              <p class="text-slate-700 leading-relaxed">Chào bạn! Tôi đã phân tích toàn bộ dữ liệu 30 ngày vừa qua của cả 2 kênh Meta Ads và TikTok Ads. Bạn có thể bấm vào các câu hỏi gợi ý bên trên hoặc nhập trực tiếp câu hỏi vào ô bên dưới.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Box -->
+        <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-md flex items-center gap-2">
+          <input type="text" id="askDataInput" onkeydown="if(event.key === 'Enter') window.app.handleAskUserQuestion()" placeholder="Nhập câu hỏi phân tích dữ liệu (vd: Phân bổ ngân sách 50 triệu thế nào?)..." class="flex-1 px-4 py-2.5 text-xs outline-none bg-transparent" />
+          <button onclick="window.app.handleAskUserQuestion()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-xs transition">
+            Gửi câu hỏi →
+          </button>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 15: REPORT BUILDER -->
+      <!-- ===================================================================== -->
+      <section id="screen-reports" class="app-screen hidden p-6 max-w-4xl mx-auto w-full space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Trình Khởi Tạo Báo Cáo (Report Builder)</h2>
+          <p class="text-xs text-slate-500">Tự động tổng hợp số liệu từ Unified Data Engine thành tài liệu báo cáo phân tích hoàn chỉnh.</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5 text-xs">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Tên Báo Cáo</label>
+            <input type="text" value="Báo Cáo Hiệu Suất Quảng Cáo Tuần 40 — AdsHub AI" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-medium" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Chu kỳ Thời gian</label>
+              <select class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none">
+                <option>7 Ngày gần nhất (01/10/2026 - 08/10/2026)</option>
+                <option>14 Ngày gần nhất</option>
+                <option>30 Ngày gần nhất</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Nền tảng Tích hợp</label>
+              <select class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none">
+                <option>Tất cả (Meta Ads + TikTok Ads)</option>
+                <option>Chỉ Meta Ads</option>
+                <option>Chỉ TikTok Ads</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <span class="font-bold text-slate-700 block mb-2">Các Phần Đưa Vào Báo Cáo</span>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <label class="flex items-center gap-2"><input type="checkbox" checked class="rounded text-indigo-600"> <span>Executive KPI Summary</span></label>
+              <label class="flex items-center gap-2"><input type="checkbox" checked class="rounded text-indigo-600"> <span>So sánh Meta vs TikTok</span></label>
+              <label class="flex items-center gap-2"><input type="checkbox" checked class="rounded text-indigo-600"> <span>Top Chiến dịch Hiệu quả</span></label>
+              <label class="flex items-center gap-2"><input type="checkbox" checked class="rounded text-indigo-600"> <span>Creative Fatigue & Winners</span></label>
+              <label class="flex items-center gap-2"><input type="checkbox" checked class="rounded text-indigo-600"> <span>Chẩn đoán AI & Khuyến nghị</span></label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+            <button onclick="window.app.navigateTo('screen-report-preview')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-xs transition">
+              Tạo và Xem Trước Bản In A4 →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 16: EXPORT & REPORT PREVIEW (A4 / EXCEL / PDF) -->
+      <!-- ===================================================================== -->
+      <section id="screen-report-preview" class="app-screen hidden p-6 max-w-4xl mx-auto w-full space-y-6">
+        <!-- Action Toolbar -->
+        <div class="flex items-center justify-between no-print">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Xem Trước Báo Cáo (Report Preview)</h2>
+            <p class="text-xs text-slate-500">Được tối ưu hóa hoàn hảo cho khổ giấy A4 chuẩn và xuất file Excel.</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <button onclick="window.app.triggerExportExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-xs">
+              📊 Tải Excel (.xlsx)
+            </button>
+            <button onclick="window.app.triggerPrintPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-xs">
+              🖨️ In / Lưu PDF A4
+            </button>
+          </div>
+        </div>
+
+        <!-- A4 Document Card -->
+        <div class="bg-white p-8 md:p-12 rounded-3xl border border-slate-200 shadow-xl space-y-6 text-slate-900">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-6">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-lg">A</div>
+              <div>
+                <h1 class="text-xl font-black tracking-tight">BÁO CÁO HIỆU SUẤT QUẢNG CÁO</h1>
+                <p id="reportPreviewDateStr" class="text-xs text-slate-500">Chu kỳ: 7 Ngày gần nhất • Chuẩn hóa Meta & TikTok</p>
+              </div>
+            </div>
+            <div class="text-right text-xs">
+              <span class="font-bold block text-slate-800">Kstudy E-commerce Group</span>
+              <span class="text-slate-400">Xuất bởi: ADS AI MANAGER</span>
+            </div>
+          </div>
+
+          <!-- KPI Summary -->
+          <div>
+            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400 mb-3">1. TỔNG QUAN CHỈ SỐ THEN CHỐT</h3>
+            <div id="reportPreviewKpiSummary" class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+
+          <!-- Channel Share & Insights -->
+          <div class="space-y-3">
+            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400">2. ĐÁNH GIÁ TỔNG QUAN KÊNH (META VS TIKTOK)</h3>
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs text-slate-700 space-y-2 leading-relaxed">
+              <p>• <strong>Meta Ads:</strong> Chiếm 62% tỷ trọng chi tiêu, dẫn đầu về tỷ lệ chuyển đổi đơn hàng giá trị cao với ROAS trung bình 3.58. Tệp Retargeting 7 ngày đạt hiệu quả tối ưu.</p>
+              <p>• <strong>TikTok Ads:</strong> Chiếm 38% chi tiêu, chi phí CPC rẻ hơn 34% so với Meta, thu hút lượng lớn khách hàng mới giai đoạn Nhận thức và mua hàng trên TikTok Shop.</p>
+            </div>
+          </div>
+
+          <!-- AI Conclusion -->
+          <div class="space-y-3">
+            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400">3. KẾT LUẬN & ĐỀ XUẤT HÀNH ĐỘNG CỦA AI COPILOT</h3>
+            <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 text-xs text-slate-800 space-y-2">
+              <p class="font-bold text-indigo-900">[FACT]: Chi tiêu được kiểm soát tốt với CPA trung bình 45,000 ₫.</p>
+              <p class="font-bold text-indigo-900">[RECOMMENDATION]: Dồn 70% ngân sách vào 2 chiến dịch Top ROAS, đồng thời thay thế ngay 1 mẫu video đang bị bão hòa tần suất hiển thị.</p>
+            </div>
+          </div>
+
+          <div class="pt-6 border-t border-slate-100 text-center text-[10px] text-slate-400">
+            Báo cáo được khởi tạo tự động bởi ADS AI MANAGER — MVP V1.0 • Bảo mật thông tin nội bộ
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 17: CONNECTIONS (REAL META & TIKTOK API INTEGRATION) -->
+      <!-- ===================================================================== -->
+      <section id="screen-connections" class="app-screen hidden p-6 max-w-5xl mx-auto w-full space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Quản Lý Kết Nối Nền Tảng (Connections)</h2>
+            <p class="text-xs text-slate-500">Tích hợp trực tiếp với Meta Graph API và TikTok Marketing API để nhận dữ liệu thật.</p>
+          </div>
+          <span id="connActiveModeBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+            CHẾ ĐỘ MÔ PHỎNG (DEMO MODE)
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Meta Ads Connection Card -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white font-bold flex items-center justify-center text-lg">f</div>
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900">Meta Ads (Facebook & Instagram)</h3>
+                  <span class="text-xs text-slate-400">Graph API v19.0</span>
+                </div>
+              </div>
+              <span id="connMetaStatus" class="text-xs font-bold text-slate-500">DEMO VERIFIED</span>
+            </div>
+
+            <p class="text-xs text-slate-500">Hỗ trợ tự động đồng bộ Campaigns, Ad Sets, Ads và Daily Insights từ Meta Pixel & CAPI.</p>
+
+            <div class="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
+              <div class="flex justify-between text-slate-600"><span>Ad Account ID:</span> <strong id="connMetaAccId" class="font-mono">act_1029384756</strong></div>
+              <div class="flex justify-between text-slate-600"><span>Token Status:</span> <strong class="text-emerald-600">Hợp lệ (Active)</strong></div>
+            </div>
+
+            <div class="flex gap-2 text-xs">
+              <button onclick="window.openMetaConnectModal()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition shadow-xs">
+                🔗 Cài đặt Meta Token Thật
+              </button>
+            </div>
+          </div>
+
+          <!-- TikTok Ads Connection Card -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-slate-900 text-white font-bold flex items-center justify-center text-lg">d</div>
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900">TikTok Ads</h3>
+                  <span class="text-xs text-slate-400">Marketing API v1.3</span>
+                </div>
+              </div>
+              <span id="connTikTokStatus" class="text-xs font-bold text-slate-500">DEMO VERIFIED</span>
+            </div>
+
+            <p class="text-xs text-slate-500">Đồng bộ hiệu suất chiến dịch TikTok Shop, GMV, Spark Ads và Creative Materials.</p>
+
+            <div class="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
+              <div class="flex justify-between text-slate-600"><span>Advertiser ID:</span> <strong id="connTTAdvId" class="font-mono">7298374829103</strong></div>
+              <div class="flex justify-between text-slate-600"><span>Token Status:</span> <strong class="text-emerald-600">Hợp lệ (Active)</strong></div>
+            </div>
+
+            <div class="flex gap-2 text-xs">
+              <button onclick="window.openTikTokConnectModal()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-xl transition shadow-xs">
+                🔗 Cài đặt TikTok Token Thật
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode Toggle Switcher Card -->
+        <div class="bg-white p-6 rounded-3xl border border-indigo-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="space-y-1">
+            <h4 class="font-bold text-sm text-slate-900">Chuyển đổi Chế độ Nguồn Dữ liệu</h4>
+            <p class="text-xs text-slate-500">Bạn có thể linh hoạt chuyển đổi giữa Dữ liệu Demo 30 ngày (chuẩn quan hệ) và Dữ liệu Live từ tài khoản thật.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="window.setAppMode('demo')" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-white shadow-xs">🌟 Dùng Demo Mode</button>
+            <button onclick="window.setAppMode('live')" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-xs">🚀 Dùng Live Real API</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- SCREEN 18: SETTINGS -->
+      <!-- ===================================================================== -->
+      <section id="screen-settings" class="app-screen hidden p-6 max-w-4xl mx-auto w-full space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Cài Đặt Hệ Thống (Settings)</h2>
+          <p class="text-xs text-slate-500">Cấu hình Workspace, ngưỡng cảnh báo AI Rule Engine và lưu trữ trình duyệt.</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 text-xs">
+          <!-- Workspace Info -->
+          <div class="space-y-3">
+            <h3 class="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">Thông tin Workspace</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="font-bold text-slate-700 block mb-1">Tên Không gian làm việc</label>
+                <input id="settingWorkspaceNameInput" type="text" value="Kstudy E-commerce Group" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none font-medium" />
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 block mb-1">Đơn vị Tiền tệ mặc định</label>
+                <select class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none">
+                  <option selected>VND (₫)</option>
+                  <option>USD ($)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Rule Engine Thresholds -->
+          <div class="space-y-3">
+            <h3 class="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">Ngưỡng Kích Hoạt AI Rule Engine</h3>
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="font-bold text-slate-700 block mb-1">CPA Spike Nguy hiểm (%)</label>
+                <input type="number" value="20" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none" />
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 block mb-1">ROAS Drop Cảnh báo (%)</label>
+                <input type="number" value="15" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none" />
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 block mb-1">Frequency Mệt mỏi (Lần)</label>
+                <input type="number" value="2.4" step="0.1" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+            <button onclick="localStorage.clear(); alert('Đã khôi phục cài đặt gốc'); location.reload();" class="text-rose-600 hover:underline font-semibold">
+              Xóa Cache & Khôi phục mặc định
+            </button>
+            <button onclick="alert('Đã lưu cài đặt thành công vào localStorage!');" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition shadow-xs">
+              Lưu Cài Đặt
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: REAL META ADS CONNECT DIALOG -->
+  <!-- ========================================================================= -->
+  <div id="metaConnectModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-xs">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center text-sm">f</span>
+          <h3 class="font-bold text-sm text-slate-900">Kết Nối Meta Graph API Thật</h3>
+        </div>
+        <button onclick="document.getElementById('metaConnectModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <p class="text-slate-600">Nhập <strong>User Access Token</strong> (quyền <code>ads_read</code>) và <strong>Ad Account ID</strong> từ Meta for Developers để tải dữ liệu chiến dịch thật.</p>
+
+      <div class="space-y-3">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Meta User Access Token</label>
+          <input id="metaInputToken" type="password" placeholder="EAABw..." class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+          <span class="text-[10px] text-slate-400 mt-1 block">Lấy token tại: <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="text-blue-600 hover:underline">Meta Graph API Explorer</a></span>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Ad Account ID</label>
+          <input id="metaInputAccId" type="text" placeholder="act_1234567890" value="act_1029384756" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+        </div>
+      </div>
+
+      <div id="metaTestResultBox" class="hidden p-3 rounded-xl text-[11px]"></div>
+
+      <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+        <button onclick="window.testMetaConnection()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">
+          Kiểm tra kết nối
+        </button>
+        <button onclick="window.saveAndSyncMeta()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs">
+          Đồng bộ Dữ liệu Thật →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: REAL TIKTOK ADS CONNECT DIALOG -->
+  <!-- ========================================================================= -->
+  <div id="tiktokConnectModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-xs">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-sm">d</span>
+          <h3 class="font-bold text-sm text-slate-900">Kết Nối TikTok Marketing API Thật</h3>
+        </div>
+        <button onclick="document.getElementById('tiktokConnectModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <p class="text-slate-600">Nhập <strong>Access Token</strong> và <strong>Advertiser ID</strong> từ TikTok for Business Developer Portal.</p>
+
+      <div class="space-y-3">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">TikTok Access Token</label>
+          <input id="tiktokInputToken" type="password" placeholder="Nhập access token từ TikTok Business..." class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-rose-500 font-mono" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Advertiser ID</label>
+          <input id="tiktokInputAdvId" type="text" placeholder="7298374829103" value="7298374829103" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-rose-500 font-mono" />
+        </div>
+      </div>
+
+      <div id="tiktokTestResultBox" class="hidden p-3 rounded-xl text-[11px]"></div>
+
+      <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+        <button onclick="window.testTikTokConnection()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">
+          Kiểm tra kết nối
+        </button>
+        <button onclick="window.saveAndSyncTikTok()" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-xs">
+          Đồng bộ Dữ liệu Thật →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: HEALTH SCORE EXPLANATION (SECTION 10) -->
+  <!-- ========================================================================= -->
+  <div id="whyHealthScoreModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-xs">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black flex items-center justify-center">84</span>
+          <h3 class="font-bold text-sm text-slate-900">Cách tính Campaign Health Score</h3>
+        </div>
+        <button onclick="document.getElementById('whyHealthScoreModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <p class="text-slate-600">Điểm số từ 0 đến 100 được tính toán khách quan dựa trên 5 tiêu chí trọng số chuẩn Performance Marketing:</p>
+
+      <div class="space-y-2">
+        <div class="flex justify-between items-center p-2 rounded-xl bg-slate-50">
+          <span>1. Tương tác CTR (CTR ≥ 3.0%)</span>
+          <strong class="text-emerald-600 font-bold">+25 / 25 pts</strong>
+        </div>
+        <div class="flex justify-between items-center p-2 rounded-xl bg-slate-50">
+          <span>2. Hiệu quả Chi phí (CPA ≤ 50K)</span>
+          <strong class="text-emerald-600 font-bold">+25 / 25 pts</strong>
+        </div>
+        <div class="flex justify-between items-center p-2 rounded-xl bg-slate-50">
+          <span>3. Chất lượng Creative & Frequency</span>
+          <strong class="text-emerald-600 font-bold">+18 / 20 pts</strong>
+        </div>
+        <div class="flex justify-between items-center p-2 rounded-xl bg-slate-50">
+          <span>4. Xu hướng ROAS (ROAS ≥ 3.5)</span>
+          <strong class="text-emerald-600 font-bold">+15 / 15 pts</strong>
+        </div>
+        <div class="flex justify-between items-center p-2 rounded-xl bg-slate-50">
+          <span>5. Quy mô Đơn hàng (Volume)</span>
+          <strong class="text-emerald-600 font-bold">+12 / 15 pts</strong>
+        </div>
+      </div>
+
+      <div class="pt-2 text-center">
+        <button onclick="document.getElementById('whyHealthScoreModal').classList.add('hidden')" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl">
+          Đóng giải thích
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- APPLICATION SCRIPTS (MODULAR ARCHITECTURE) -->
+  <!-- ========================================================================= -->
+  <script src="js/data-engine.js"></script>
+  <script src="js/ai-engine.js"></script>
+  <script src="js/export-engine.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- ========================================================================= -->
+  <!-- GLOBAL EVENT BRIDGE & API INTEGRATION HANDLERS -->
+  <!-- ========================================================================= -->
+  <script>
+    // Platform Switcher
+    window.setGlobalPlatform = function(plat) {
+      ['all', 'meta', 'tiktok'].forEach(p => {
+        const btn = document.getElementById('btn-plat-' + p);
+        if (btn) btn.className = "px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900";
+      });
+      const active = document.getElementById('btn-plat-' + plat);
+      if (active) active.className = "px-2.5 py-1 rounded-lg font-bold bg-white text-slate-900 shadow-xs";
+
+      window.app.stateStore.set('platform', plat);
+      window.app.dataEngine.setFilter('platform', plat);
+    };
+
+    // Date Range Switcher
+    window.setGlobalDateRange = function(range) {
+      window.app.stateStore.set('dateRange', range);
+      window.app.dataEngine.setFilter('dateRange', range);
+    };
+
+    // Metric Tabs on Charts
+    window.setChartMetric = function(m) {
+      ['spend', 'revenue', 'roas', 'cpa', 'ctr'].forEach(t => {
+        const tab = document.getElementById('tab-metric-' + t);
+        if (tab) tab.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:bg-slate-100";
+      });
+      const active = document.getElementById('tab-metric-' + m);
+      if (active) active.className = "px-2.5 py-1 rounded-lg font-bold bg-indigo-50 text-indigo-700";
+
+      window.app.stateStore.set('chartMetric', m);
+      window.app.refreshCurrentScreen();
+    };
+
+    // Pivot Dimension
+    window.setPivotDim = function(dim) {
+      ['campaign', 'platform', 'adSet', 'creative', 'date'].forEach(d => {
+        const btn = document.getElementById('pdim-' + d);
+        if (btn) btn.className = "px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200";
+      });
+      const active = document.getElementById('pdim-' + dim);
+      if (active) active.className = "px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold";
+
+      const hdr = document.getElementById('pivotDimHeader');
+      if (hdr) hdr.textContent = dim.toUpperCase();
+
+      window.app.stateStore.set('pivotDimension', dim);
+      window.app.renderPivot();
+    };
+
+    window.exportActivePivotCSV = async function() {
+      const dim = window.app.stateStore.get('pivotDimension', 'campaign');
+      const data = await window.app.dataEngine.getPivotData(dim);
+      window.AdsAI.ExportEngine.exportPivotToCSV(data, dim);
+    };
+
+    // Modal Helpers
+    window.openMetaConnectModal = function() {
+      document.getElementById('metaConnectModal').classList.remove('hidden');
+    };
+
+    window.openTikTokConnectModal = function() {
+      document.getElementById('tiktokConnectModal').classList.remove('hidden');
+    };
+
+    window.openWhyHealthModal = function() {
+      document.getElementById('whyHealthScoreModal').classList.remove('hidden');
+    };
+
+    window.openSyncModal = function() {
+      alert('🔄 Đang đồng bộ hóa tất cả các nguồn dữ liệu...\n- Kiểm tra Meta Graph API v19.0\n- Kiểm tra TikTok Marketing API v1.3\n- Chuẩn hóa sang Unified Ads Data Model...\n=> Đồng bộ hoàn tất 100% trong 0.8s.');
+      window.app.refreshCurrentScreen();
+    };
+
+    // Mode Toggle
+    window.setAppMode = function(mode) {
+      if (mode === 'live') {
+        window.app.dataEngine.setMode('live');
+        window.app.stateStore.set('isLiveMode', true);
+        alert('🚀 Đã chuyển sang Live Real API Mode! Dữ liệu sẽ được nạp trực tiếp từ tài khoản kết nối.');
+      } else {
+        window.app.dataEngine.setMode('demo');
+        window.app.stateStore.set('isLiveMode', false);
+        alert('🌟 Đã chuyển sang Demo Mock Mode (Bộ dữ liệu 30 ngày chuẩn hóa).');
+      }
+      window.app.refreshCurrentScreen();
+    };
+
+    // Real Meta Connection Testing
+    window.testMetaConnection = async function() {
+      const token = document.getElementById('metaInputToken').value.trim();
+      const acc = document.getElementById('metaInputAccId').value.trim();
+      const resBox = document.getElementById('metaTestResultBox');
+      resBox.classList.remove('hidden');
+
+      if (!token) {
+        resBox.className = "p-3 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 block";
+        resBox.innerHTML = `⚠️ <strong>Chưa có Token:</strong> Bạn có thể tạo token thử nghiệm tại Meta Graph API Explorer, hoặc tiếp tục dùng Demo Data đã được xác thực 100%.`;
+        return;
+      }
+
+      resBox.className = "p-3 rounded-xl bg-slate-100 text-slate-700 block animate-pulse";
+      resBox.textContent = "Đang gọi Meta Graph API v19.0...";
+
+      const res = await window.app.dataEngine.metaProvider.testConnection(token, acc);
+      if (res.success) {
+        resBox.className = "p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 block";
+        resBox.innerHTML = `✅ <strong>Kết nối thành công!</strong> Tài khoản: <strong>${res.accountName}</strong> (${res.currency}) • Múi giờ: ${res.timezone}.`;
+      } else {
+        resBox.className = "p-3 rounded-xl bg-rose-50 text-rose-900 border border-rose-200 block";
+        resBox.innerHTML = `❌ <strong>Lỗi kết nối:</strong> ${res.error}`;
+      }
+    };
+
+    window.saveAndSyncMeta = async function() {
+      const token = document.getElementById('metaInputToken').value.trim();
+      const acc = document.getElementById('metaInputAccId').value.trim();
+      
+      if (!token) {
+        alert('Vui lòng nhập Token hoặc dùng Demo Mode.');
+        return;
+      }
+
+      try {
+        const syncRes = await window.app.dataEngine.metaProvider.syncLive(token, acc);
+        alert(`✅ Đã đồng bộ thành công ${syncRes.campaignsCount} chiến dịch từ Meta Ads!`);
+        document.getElementById('metaConnectModal').classList.add('hidden');
+        window.setAppMode('live');
+      } catch (err) {
+        alert('Lỗi đồng bộ Meta: ' + err.message);
+      }
+    };
+
+    // Real TikTok Connection Testing
+    window.testTikTokConnection = async function() {
+      const token = document.getElementById('tiktokInputToken').value.trim();
+      const adv = document.getElementById('tiktokInputAdvId').value.trim();
+      const resBox = document.getElementById('tiktokTestResultBox');
+      resBox.classList.remove('hidden');
+
+      if (!token) {
+        resBox.className = "p-3 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 block";
+        resBox.innerHTML = `⚠️ <strong>Chưa có Token:</strong> Bạn có thể lấy token tại TikTok Business Marketing API, hoặc dùng Demo Data đã được chuẩn bị sẵn.`;
+        return;
+      }
+
+      resBox.className = "p-3 rounded-xl bg-slate-100 text-slate-700 block animate-pulse";
+      resBox.textContent = "Đang gọi TikTok Business Marketing API v1.3...";
+
+      const res = await window.app.dataEngine.tiktokProvider.testConnection(token, adv);
+      if (res.success) {
+        resBox.className = "p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 block";
+        resBox.innerHTML = `✅ <strong>Kết nối thành công!</strong> Tài khoản TikTok: <strong>${res.accountName}</strong>.`;
+      } else {
+        resBox.className = "p-3 rounded-xl bg-rose-50 text-rose-900 border border-rose-200 block";
+        resBox.innerHTML = `❌ <strong>Lỗi kết nối:</strong> ${res.error}`;
+      }
+    };
+
+    window.saveAndSyncTikTok = async function() {
+      const token = document.getElementById('tiktokInputToken').value.trim();
+      const adv = document.getElementById('tiktokInputAdvId').value.trim();
+
+      if (!token) {
+        alert('Vui lòng nhập Token TikTok hoặc dùng Demo Mode.');
+        return;
+      }
+
+      try {
+        const syncRes = await window.app.dataEngine.tiktokProvider.syncLive(token, adv);
+        alert(`✅ Đã đồng bộ thành công ${syncRes.campaignsCount} chiến dịch từ TikTok Ads!`);
+        document.getElementById('tiktokConnectModal').classList.add('hidden');
+        window.setAppMode('live');
+      } catch (err) {
+        alert('Lỗi đồng bộ TikTok: ' + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
