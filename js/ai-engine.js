@@ -197,7 +197,241 @@ BẠN TUÂN THỦ NGHIÊM NGẶT 6 NGUYÊN TẮC GUARDRAILS:
     }
   }
 
+  // --------------------------------------------------------------------------
+  // 2. NATURAL LANGUAGE COMMAND PARSER & SLOTS EXTRACTOR
+  // --------------------------------------------------------------------------
+  const AICommandParser = {
+    parse(text = '') {
+      const lower = text.toLowerCase().trim();
+      let intent = 'UNKNOWN';
+      const slots = {
+        product: null,
+        budget: null,
+        goalOrders: null,
+        duration: null,
+        channels: ['meta', 'tiktok'] // default both
+      };
+
+      // Detect Channels
+      if (lower.includes('facebook') || lower.includes('meta')) {
+        slots.channels = lower.includes('tiktok') ? ['meta', 'tiktok'] : ['meta'];
+      } else if (lower.includes('tiktok') && !lower.includes('facebook') && !lower.includes('meta')) {
+        slots.channels = ['tiktok'];
+      }
+
+      // Budget extraction (e.g., "15 triệu", "15tr", "5 triệu", "5000000", "10tr")
+      const budgetMatch = lower.match(/(\d+[\.,]?\d*)\s*(triệu|tr|m|k|nghìn|vnd|đ)?/i);
+      if (budgetMatch) {
+        let num = parseFloat(budgetMatch[1].replace(',', '.'));
+        const unit = (budgetMatch[2] || '').toLowerCase();
+        if (unit === 'triệu' || unit === 'tr' || unit === 'm') num *= 1000000;
+        else if (unit === 'k' || unit === 'nghìn') num *= 1000;
+        else if (num > 0 && num < 500) num *= 1000000; // e.g. "15" -> 15M
+        if (num >= 50000) slots.budget = Math.round(num);
+      }
+
+      // Orders extraction (e.g., "100 đôi", "50 đơn", "100 sản phẩm")
+      const ordersMatch = lower.match(/(\d+)\s*(đôi|đơn|cái|sản phẩm|khách|lead)/i);
+      if (ordersMatch) {
+        slots.goalOrders = parseInt(ordersMatch[1], 10);
+      }
+
+      // Duration extraction (e.g. "30 ngày", "trong tháng này", "14 ngày")
+      if (lower.includes('tháng này') || lower.includes('1 tháng') || lower.includes('30 ngày')) {
+        slots.duration = 30;
+      } else if (lower.includes('14 ngày') || lower.includes('2 tuần')) {
+        slots.duration = 14;
+      } else if (lower.includes('7 ngày') || lower.includes('1 tuần') || lower.includes('tuần này')) {
+        slots.duration = 7;
+      } else {
+        const durMatch = lower.match(/(\d+)\s*ngày/i);
+        if (durMatch) slots.duration = parseInt(durMatch[1], 10);
+      }
+
+      // Product extraction
+      const productKeywords = [
+        'giày', 'giày sneaker', 'mỹ phẩm', 'son môi', 'kem chống nắng', 'thời trang', 
+        'áo thun', 'áo polo', 'váy', 'đầm', 'túi xách', 'đồng hồ', 'tai nghe', 
+        'phụ kiện', 'đồ gia dụng', 'nước hoa', 'thực phẩm', 'khoá học', 'quần áo'
+      ];
+      for (const pk of productKeywords) {
+        if (lower.includes(pk)) {
+          slots.product = pk.charAt(0).toUpperCase() + pk.slice(1);
+          break;
+        }
+      }
+
+      // Intent Classification
+      if (lower.includes('tạo chiến dịch') || lower.includes('bán') || lower.includes('chạy quảng cáo') || lower.includes('chạy ads') || lower.includes('quảng cáo giúp tôi') || lower.includes('tạo quảng cáo')) {
+        intent = 'CREATE_CAMPAIGN';
+      } else if (lower.includes('tối ưu') || lower.includes('giảm cpa') || lower.includes('hạ giá')) {
+        intent = 'OPTIMIZE_CPA';
+      } else if (lower.includes('tăng ngân sách') || lower.includes('vít') || lower.includes('scale') || lower.includes('roas tốt')) {
+        intent = 'SCALE_WINNERS';
+      } else if (lower.includes('tạm dừng') || lower.includes('tắt') || lower.includes('đang lỗ') || lower.includes('chưa có đơn') || lower.includes('cắn tiền')) {
+        intent = 'STOP_LOSING';
+      } else if (lower.includes('ý tưởng') || lower.includes('video tiktok') || lower.includes('creative') || lower.includes('concept')) {
+        intent = 'GENERATE_CREATIVES';
+      } else if (lower.includes('tại sao') || lower.includes('giảm hiệu quả') || lower.includes('phân tích')) {
+        intent = 'ANALYZE_WHY';
+      } else if (lower.includes('báo cáo') || lower.includes('report') || lower.includes('tổng kết')) {
+        intent = 'GENERATE_REPORT';
+      } else if (lower.includes('lời hay lỗ') || lower.includes('lợi nhuận') || lower.includes('lãi')) {
+        intent = 'PROFIT_CHECK';
+      }
+
+      return { intent, slots, rawText: text };
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // 3. INTELLIGENT CLARIFICATION STATE MACHINE (ONE-QUESTION-AT-A-TIME)
+  // --------------------------------------------------------------------------
+  class ClarificationStateMachine {
+    constructor() {
+      this.pendingPlan = null;
+      this.currentStep = 'IDLE'; // 'ASK_PRODUCT' | 'ASK_BUDGET' | 'ASK_DURATION' | 'READY'
+    }
+
+    start(initialSlots = {}) {
+      this.pendingPlan = {
+        product: initialSlots.product || null,
+        budget: initialSlots.budget || null,
+        duration: initialSlots.duration || null,
+        goalOrders: initialSlots.goalOrders || null,
+        channels: initialSlots.channels || ['meta', 'tiktok']
+      };
+      return this.getNextQuestion();
+    }
+
+    getNextQuestion() {
+      if (!this.pendingPlan.product) {
+        this.currentStep = 'ASK_PRODUCT';
+        return {
+          status: 'NEED_CLARIFICATION',
+          question: 'Bạn muốn quảng cáo sản phẩm hoặc dịch vụ nào? (Ví dụ: Giày sneaker, Mỹ phẩm, Áo thun...)',
+          field: 'product'
+        };
+      }
+      if (!this.pendingPlan.budget) {
+        this.currentStep = 'ASK_BUDGET';
+        return {
+          status: 'NEED_CLARIFICATION',
+          question: `Bạn dự định chi khoảng bao nhiêu ngân sách cho sản phẩm "${this.pendingPlan.product}"? (Ví dụ: 5 triệu, 15 triệu...)`,
+          field: 'budget'
+        };
+      }
+      if (!this.pendingPlan.duration) {
+        this.currentStep = 'ASK_DURATION';
+        return {
+          status: 'NEED_CLARIFICATION',
+          question: 'Bạn muốn chiến dịch chạy trong thời gian bao lâu? (Ví dụ: 14 ngày hoặc 30 ngày)',
+          field: 'duration'
+        };
+      }
+
+      this.currentStep = 'READY';
+      return {
+        status: 'READY',
+        message: 'Tôi đã có đủ thông tin để lập kế hoạch triển khai cho bạn.',
+        planParams: this.pendingPlan
+      };
+    }
+
+    answer(text) {
+      if (this.currentStep === 'ASK_PRODUCT') {
+        this.pendingPlan.product = text.trim();
+      } else if (this.currentStep === 'ASK_BUDGET') {
+        const parsed = AICommandParser.parse(text);
+        this.pendingPlan.budget = parsed.slots.budget || 10000000;
+      } else if (this.currentStep === 'ASK_DURATION') {
+        const parsed = AICommandParser.parse(text);
+        this.pendingPlan.duration = parsed.slots.duration || 30;
+      }
+      return this.getNextQuestion();
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 4. 7-PHASE EXECUTION PLAN GENERATOR
+  // --------------------------------------------------------------------------
+  const PlanGenerator = {
+    generate(params) {
+      const budget = params.budget || 10000000;
+      const duration = params.duration || 30;
+      const product = params.product || 'Sản phẩm mới';
+      const targetOrders = params.goalOrders || Math.max(20, Math.round(budget / 115000));
+      const targetCPA = Math.round(budget / targetOrders);
+      const metaBudget = Math.round(budget * 0.6);
+      const tiktokBudget = Math.round(budget * 0.4);
+      const formatVND = window.AdsAI.MetricsCalc.formatVND;
+
+      return {
+        id: 'plan_' + Date.now(),
+        product,
+        budget,
+        duration,
+        targetOrders,
+        targetCPA,
+        metaBudget,
+        tiktokBudget,
+        channels: params.channels || ['meta', 'tiktok'],
+        campaignName: `[AI] Chiến dịch Bán ${product} - ${duration}D`,
+        phases: [
+          { phase: 1, name: 'ANALYZE', status: 'READY', items: [`Phân tích tệp khách hàng mua ${product} (18-35 tuổi)`, 'Rà soát dữ liệu đối thủ & benchmark ngành', 'Kiểm tra độ nhận diện sản phẩm trên thị trường'] },
+          { phase: 2, name: 'STRATEGY', status: 'READY', items: [`Phân bổ ngân sách: 60% Meta (${formatVND(metaBudget)}) • 40% TikTok (${formatVND(tiktokBudget)})`, 'Meta Ads: Tối ưu chuyển đổi đơn hàng & Retargeting tệp ấm', 'TikTok Ads: Kéo traffic giá rẻ & Video Hook 3s'] },
+          { phase: 3, name: 'CREATIVE', status: 'READY', items: ['Sản xuất 2 mẫu Video dọc 9:16 (Unboxing & Review độ bền)', 'Thiết kế 1 bộ Carousel Feedback 4 ảnh cho Meta Ads', 'Chuẩn bị 3 tiêu đề Hook đánh trúng tâm lý deal sốc'] },
+          { phase: 4, name: 'BUILD', status: 'READY', items: ['Khởi tạo 2 Chiến dịch chuẩn hóa (1 Meta, 1 TikTok)', 'Thiết lập 4 Ad Sets với tệp Sở thích & Lookalike 1%', 'Tạo 8 Ads đa dạng biến thể nội dung'] },
+          { phase: 5, name: 'VALIDATE', status: 'READY', items: ['Quét tự động Meta & TikTok Advertising Policy', 'Kiểm tra liên kết Pixel & TikTok Events API', 'Xác thực ngân sách ngày an toàn'] },
+          { phase: 6, name: 'LAUNCH', status: 'PENDING', items: ['Yêu cầu User duyệt tại Approval Center', 'Kích hoạt publish an toàn lên tài khoản quảng cáo'] },
+          { phase: 7, name: 'MONITOR', status: 'PLANNED', items: [`Giám sát liên tục trần CPA <= ${formatVND(targetCPA)}`, 'Phát hiện sớm Creative Fatigue sau 5 ngày', 'Tự động đề xuất scale ngân sách khi ROAS > 3.0'] }
+        ]
+      };
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // 5. AUTOPILOT AUTOMATION MANAGER & KILL SWITCH
+  // --------------------------------------------------------------------------
+  class AutopilotManager {
+    constructor(dataEngine) {
+      this.dataEngine = dataEngine;
+      this.mode = localStorage.getItem('ads_ai_autopilot_mode_v1') || 'ASSISTED';
+      this.limits = {
+        maxBudgetChangePercent: 15,
+        maxDailySpendCap: 500000,
+        allowedActions: ['PAUSE_FATIGUED_ADS', 'SCALE_WINNER_BUDGET', 'PAUSE_HIGH_CPA'],
+        requireApproval: ['CREATE_CAMPAIGN', 'INCREASE_TOTAL_BUDGET', 'CHANGE_AUDIENCE']
+      };
+      this.isActive = true;
+    }
+
+    setMode(mode) {
+      this.mode = mode;
+      localStorage.setItem('ads_ai_autopilot_mode_v1', mode);
+    }
+
+    getMode() {
+      return localStorage.getItem('ads_ai_autopilot_mode_v1') || this.mode;
+    }
+
+    stopAutopilot() {
+      this.mode = 'COPILOT';
+      this.isActive = false;
+      localStorage.setItem('ads_ai_autopilot_mode_v1', 'COPILOT');
+      return {
+        stopped: true,
+        timestamp: new Date().toLocaleTimeString('vi-VN'),
+        message: 'Đã kích hoạt KILL SWITCH: Toàn bộ tác vụ tự động đã dừng. Hệ thống chuyển về chế độ Copilot (chỉ tư vấn).'
+      };
+    }
+  }
+
   window.AdsAI = window.AdsAI || {};
   window.AdsAI.AIAssistantEngine = AIAssistantEngine;
+  window.AdsAI.AICommandParser = AICommandParser;
+  window.AdsAI.ClarificationStateMachine = ClarificationStateMachine;
+  window.AdsAI.PlanGenerator = PlanGenerator;
+  window.AdsAI.AutopilotManager = AutopilotManager;
 
 })(window);

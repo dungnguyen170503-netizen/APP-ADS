@@ -50,6 +50,12 @@
       return new Intl.NumberFormat('vi-VN').format(Math.round(num)) + ' ₫';
     },
 
+    formatProfit(num) {
+      if (num === null || num === undefined || isNaN(num)) return 'N/A';
+      const sign = num > 0 ? '+' : '';
+      return sign + this.formatVND(num);
+    },
+
     formatNumber(num) {
       if (num === null || num === undefined || isNaN(num)) return 'N/A';
       if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
@@ -891,6 +897,17 @@
 
       const current = MetricsCalc.calculate({ spend, revenue, impressions, reach, clicks, conversions });
 
+      // Rule #23: Estimated Profit after Ads & Estimated Product Cost
+      // Estimated COGS (Giá vốn hàng bán ước tính): ~45% Doanh thu
+      // Estimated Platform & Shipping Fees: ~7% Doanh thu
+      const estimatedCOGS = Math.round(revenue * 0.45);
+      const estimatedFees = Math.round(revenue * 0.07);
+      const estimatedProfit = Math.round(revenue - estimatedCOGS - estimatedFees - spend);
+
+      current.estimatedCOGS = estimatedCOGS;
+      current.estimatedFees = estimatedFees;
+      current.estimatedProfit = estimatedProfit;
+
       // Calculate mock previous period comparison delta (%)
       // e.g. previous 7 days or previous period
       return {
@@ -1187,6 +1204,320 @@
         ...g,
         metrics: MetricsCalc.calculate(g)
       }));
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * AI MARKETING AGENT: ACTION ENGINE & ACTIVITY LOG WITH ROLLBACK
+     * ------------------------------------------------------------------------
+     */
+    getActivityLog() {
+      try {
+        const stored = localStorage.getItem('ads_ai_activity_log_v1');
+        if (stored) return JSON.parse(stored);
+      } catch (e) {
+        console.warn('Error reading activity log:', e);
+      }
+      return [
+        {
+          id: 'act_log_001',
+          timestamp: '2026-10-21 19:45',
+          agent: 'AI Copilot',
+          actionType: 'PAUSE_ADSET',
+          title: 'Tạm dừng Ad Set hiệu quả thấp',
+          description: 'Tạm dừng Ad Set "GenZ Streetwear - Interest Test" do CPA vượt 68.000₫ và 0 đơn trong 48h qua.',
+          beforeState: { entityType: 'adSet', id: 'as_meta_03', status: 'ACTIVE' },
+          afterState: { entityType: 'adSet', id: 'as_meta_03', status: 'PAUSED' },
+          userApproved: true,
+          status: 'SUCCESS',
+          canUndo: true
+        },
+        {
+          id: 'act_log_002',
+          timestamp: '2026-10-21 18:30',
+          agent: 'Autopilot Rule Engine',
+          actionType: 'SCALE_BUDGET',
+          title: 'Tăng ngân sách chiến dịch Winner (+15%)',
+          description: 'Tăng ngân sách từ 2.000.000₫ lên 2.300.000₫ cho chiến dịch "Lookbook Thu Đông 2026 (Meta)" do ROAS đạt 3.70.',
+          beforeState: { entityType: 'campaign', id: 'cmp_meta_01', budget: 2000000 },
+          afterState: { entityType: 'campaign', id: 'cmp_meta_01', budget: 2300000 },
+          userApproved: true,
+          status: 'SUCCESS',
+          canUndo: true
+        }
+      ];
+    }
+
+    saveActivityLog(log) {
+      try {
+        localStorage.setItem('ads_ai_activity_log_v1', JSON.stringify(log));
+      } catch (e) {
+        console.warn('Error writing activity log:', e);
+      }
+    }
+
+    logAction({ actionType, title, description, beforeState, afterState, userApproved = true }) {
+      const log = this.getActivityLog();
+      const newEntry = {
+        id: 'act_log_' + Date.now(),
+        timestamp: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
+        agent: 'NTDAds AI Agent',
+        actionType,
+        title,
+        description,
+        beforeState,
+        afterState,
+        userApproved,
+        status: 'SUCCESS',
+        canUndo: true
+      };
+      log.unshift(newEntry);
+      this.saveActivityLog(log);
+      return newEntry;
+    }
+
+    /**
+     * Create Campaign via AI Plan execution
+     */
+    async createCampaignDynamic(plan) {
+      const prov = this.activeProvider;
+      if (!prov || !prov.data) return null;
+
+      const newCmpId = 'cmp_ai_' + Date.now();
+      const budgetPerDay = Math.round(plan.budget / Math.max(1, plan.duration || 30));
+
+      const newCampaign = {
+        id: newCmpId,
+        accountId: plan.platform === 'tiktok' ? 'act_tiktok_01' : 'act_meta_01',
+        platform: plan.platform || 'meta',
+        name: plan.campaignName || `[AI] Chiến dịch ${plan.product || 'Sản phẩm mới'}`,
+        objective: 'CONVERSIONS',
+        status: 'ACTIVE',
+        budget: budgetPerDay,
+        budgetType: 'DAILY',
+        startDate: new Date().toISOString().slice(0, 10),
+        endDate: null
+      };
+
+      prov.data.campaigns.unshift(newCampaign);
+
+      // Create 2 Ad Sets
+      const as1Id = `as_${newCmpId}_01`;
+      const as2Id = `as_${newCmpId}_02`;
+      const as1 = {
+        id: as1Id,
+        campaignId: newCmpId,
+        platform: newCampaign.platform,
+        name: `AdSet #1 - Target Khách hàng quan tâm ${plan.product}`,
+        audience: `Tệp quan tâm ${plan.product}, Tuổi 18-35`,
+        budget: Math.round(budgetPerDay * 0.6),
+        status: 'ACTIVE'
+      };
+      const as2 = {
+        id: as2Id,
+        campaignId: newCmpId,
+        platform: newCampaign.platform,
+        name: `AdSet #2 - Lookalike 1% Khách hàng đã mua`,
+        audience: `Lookalike 1% Purchase 30 ngày`,
+        budget: Math.round(budgetPerDay * 0.4),
+        status: 'ACTIVE'
+      };
+      prov.data.adSets.unshift(as1, as2);
+
+      // Create 4 Ads
+      const creativePool = prov.data.creatives || [];
+      const cr1 = creativePool[0] || { id: 'cr_01', name: 'Creative Mẫu' };
+      const cr2 = creativePool[1] || { id: 'cr_02', name: 'Creative Mẫu 2' };
+
+      const ad1 = { id: `ad_${newCmpId}_01`, adSetId: as1Id, campaignId: newCmpId, platform: newCampaign.platform, name: `Ad #1 - Video Hook 3s Khám phá`, creativeId: cr1.id, status: 'ACTIVE' };
+      const ad2 = { id: `ad_${newCmpId}_02`, adSetId: as1Id, campaignId: newCmpId, platform: newCampaign.platform, name: `Ad #2 - Carousel Đánh giá Feedback`, creativeId: cr2.id, status: 'ACTIVE' };
+      const ad3 = { id: `ad_${newCmpId}_03`, adSetId: as2Id, campaignId: newCmpId, platform: newCampaign.platform, name: `Ad #3 - Deal Sốc Giới Hạn`, creativeId: cr1.id, status: 'ACTIVE' };
+      const ad4 = { id: `ad_${newCmpId}_04`, adSetId: as2Id, campaignId: newCmpId, platform: newCampaign.platform, name: `Ad #4 - Video Trải nghiệm Unboxing`, creativeId: cr2.id, status: 'ACTIVE' };
+
+      prov.data.ads.unshift(ad1, ad2, ad3, ad4);
+
+      // Create simulated daily metric for today
+      const todayStr = '2026-10-08';
+      prov.data.dailyMetrics.unshift({
+        date: todayStr,
+        platform: newCampaign.platform,
+        campaignId: newCmpId,
+        adSetId: as1Id,
+        adId: ad1.id,
+        creativeId: cr1.id,
+        metrics: {
+          spend: 180000,
+          revenue: 650000,
+          impressions: 5200,
+          reach: 4800,
+          clicks: 195,
+          conversions: 4
+        }
+      });
+
+      // Log action
+      this.logAction({
+        actionType: 'CREATE_CAMPAIGN',
+        title: `Tạo mới chiến dịch: ${newCampaign.name}`,
+        description: `Tạo 1 Chiến dịch (${newCampaign.platform.toUpperCase()}), 2 Ad Sets, 4 Ads. Ngân sách ${MetricsCalc.formatVND(plan.budget)}.`,
+        beforeState: null,
+        afterState: { entityType: 'campaign', id: newCmpId },
+        userApproved: true
+      });
+
+      return {
+        campaign: newCampaign,
+        adSets: [as1, as2],
+        ads: [ad1, ad2, ad3, ad4]
+      };
+    }
+
+    /**
+     * Pause Entity (AdSet or Campaign)
+     */
+    async pauseEntityDynamic(entityType, entityId) {
+      const prov = this.activeProvider;
+      if (!prov || !prov.data) return false;
+
+      let target = null;
+      let title = '';
+      if (entityType === 'adSet') {
+        target = prov.data.adSets.find(s => s.id === entityId);
+        title = target ? `Tạm dừng Ad Set: ${target.name}` : `Tạm dừng Ad Set ${entityId}`;
+      } else if (entityType === 'campaign') {
+        target = prov.data.campaigns.find(c => c.id === entityId);
+        title = target ? `Tạm dừng Chiến dịch: ${target.name}` : `Tạm dừng Chiến dịch ${entityId}`;
+      }
+
+      if (!target) return false;
+
+      const prevStatus = target.status;
+      target.status = 'PAUSED';
+
+      this.logAction({
+        actionType: 'PAUSE_' + entityType.toUpperCase(),
+        title,
+        description: `Trạng thái chuyển từ ${prevStatus} sang PAUSED theo khuyến nghị tối ưu của AI.`,
+        beforeState: { entityType, id: entityId, status: prevStatus },
+        afterState: { entityType, id: entityId, status: 'PAUSED' },
+        userApproved: true
+      });
+
+      return true;
+    }
+
+    /**
+     * Update Budget
+     */
+    async updateBudgetDynamic(entityType, entityId, newBudget) {
+      const prov = this.activeProvider;
+      if (!prov || !prov.data) return false;
+
+      let target = null;
+      if (entityType === 'campaign') {
+        target = prov.data.campaigns.find(c => c.id === entityId);
+      } else if (entityType === 'adSet') {
+        target = prov.data.adSets.find(s => s.id === entityId);
+      }
+
+      if (!target) return false;
+
+      const prevBudget = target.budget;
+      target.budget = Math.round(newBudget);
+
+      this.logAction({
+        actionType: 'UPDATE_BUDGET',
+        title: `Điều chỉnh ngân sách ${target.name}`,
+        description: `Ngân sách thay đổi từ ${MetricsCalc.formatVND(prevBudget)} sang ${MetricsCalc.formatVND(newBudget)}.`,
+        beforeState: { entityType, id: entityId, budget: prevBudget },
+        afterState: { entityType, id: entityId, budget: target.budget },
+        userApproved: true
+      });
+
+      return true;
+    }
+
+    /**
+     * Rollback Action (UNDO)
+     */
+    async revertAction(logId) {
+      const logs = this.getActivityLog();
+      const entry = logs.find(l => l.id === logId);
+      if (!entry || !entry.canUndo) return { success: false, message: 'Hành động không thể hoàn tác' };
+
+      const prov = this.activeProvider;
+      if (!prov || !prov.data) return { success: false, message: 'Dữ liệu không khả dụng' };
+
+      // Revert based on actionType
+      if (entry.actionType.startsWith('PAUSE_')) {
+        const { entityType, id, status } = entry.beforeState;
+        if (entityType === 'adSet') {
+          const item = prov.data.adSets.find(s => s.id === id);
+          if (item) item.status = status;
+        } else if (entityType === 'campaign') {
+          const item = prov.data.campaigns.find(c => c.id === id);
+          if (item) item.status = status;
+        }
+      } else if (entry.actionType === 'UPDATE_BUDGET') {
+        const { entityType, id, budget } = entry.beforeState;
+        if (entityType === 'campaign') {
+          const item = prov.data.campaigns.find(c => c.id === id);
+          if (item) item.budget = budget;
+        } else if (entityType === 'adSet') {
+          const item = prov.data.adSets.find(s => s.id === id);
+          if (item) item.budget = budget;
+        }
+      } else if (entry.actionType === 'CREATE_CAMPAIGN') {
+        const cmpId = entry.afterState.id;
+        prov.data.campaigns = prov.data.campaigns.filter(c => c.id !== cmpId);
+        prov.data.adSets = prov.data.adSets.filter(s => s.campaignId !== cmpId);
+        prov.data.ads = prov.data.ads.filter(a => a.campaignId !== cmpId);
+        prov.data.dailyMetrics = prov.data.dailyMetrics.filter(m => m.campaignId !== cmpId);
+      }
+
+      entry.status = 'REVERTED';
+      entry.canUndo = false;
+      this.saveActivityLog(logs);
+
+      return { success: true, message: `Đã hoàn tác thành công: ${entry.title}` };
+    }
+
+    /**
+     * OAuth State Management
+     */
+    getOAuthState() {
+      try {
+        const raw = localStorage.getItem('ads_ai_oauth_state_v1');
+        if (raw) return JSON.parse(raw);
+      } catch (e) {
+        console.warn('OAuth state error:', e);
+      }
+      return {
+        meta: {
+          connected: true,
+          accountName: 'Kstudy Fashion Official (act_1029384756)',
+          accountId: 'act_1029384756',
+          lastSynced: '2 phút trước',
+          mode: 'DEMO_MOCK'
+        },
+        tiktok: {
+          connected: true,
+          accountName: 'Kstudy Shop Vietnam (adv_7298374829103)',
+          accountId: '7298374829103',
+          lastSynced: '5 phút trước',
+          mode: 'DEMO_MOCK'
+        }
+      };
+    }
+
+    setOAuthState(platform, data) {
+      const state = this.getOAuthState();
+      state[platform] = { ...state[platform], ...data };
+      try {
+        localStorage.setItem('ads_ai_oauth_state_v1', JSON.stringify(state));
+      } catch (e) {
+        console.warn('OAuth save error:', e);
+      }
     }
   }
 

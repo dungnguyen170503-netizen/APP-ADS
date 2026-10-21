@@ -324,3 +324,78 @@ Tất cả các màn hình được hiện thực hóa đầy đủ trong kiến
 3. Trong màn hình **Connections (Screen 17)**, dán Token và Advertiser ID để đồng bộ trực tiếp.
 4. Có thể chuyển đổi qua lại giữa **🌟 Chế độ Demo Mode** và **🚀 Chế độ Live Real API** bất kỳ lúc nào với 1 click.
 
+---
+
+## 11. KIẾN TRÚC NTDADS — AI MARKETING AGENT (PHIÊN BẢN 2.0)
+
+### 11.1. Tầm nhìn Chuyển đổi Sản phẩm
+> **Từ Dashboard quản lý quảng cáo thông thường thành Hệ điều hành Tiếp thị AI (AI Marketing Operating System).**  
+> **Triết lý cốt lõi:** *"Bạn nói mục tiêu kinh doanh. NTDAds lo phần quảng cáo."*
+
+```text
+USER GOAL
+  ↓
+AI HIỂU (NLP Slots Extractor)
+  ↓
+THIẾU THÔNG TIN? → AI CLARIFICATION (Hỏi từng câu một)
+  ↓
+AI LẬP KẾ HOẠCH (7-Phase Execution Plan)
+  ↓
+APPROVAL CENTER GATE (Người dùng duyệt an toàn)
+  ↓
+ACTIVITY CENTER (AI triển khai đa kênh Meta + TikTok)
+  ↓
+MONITORING & AI ACTION (Phát hiện bất thường CPA/Fatigue)
+  ↓
+AUTOPILOT / ASSISTED OPTIMIZATION (Hành động có thể Undo)
+```
+
+### 11.2. Lộ trình Triển khai 4 Giai đoạn (Phases 1-4)
+
+#### Phase 1 — Command Center + Simple Mode
+* **AI Command Center (Màn hình trung tâm Hero):**
+  * Ô nhập lệnh tự nhiên hỗ trợ Voice Mic và Quick Suggestion Pills.
+  * **Tình hình hôm nay (Executive Snapshot):** Doanh thu, Chi tiêu, Lãi ước tính sau Ads (Rule #23 minh bạch công thức), Health Score 0-100.
+  * **AI Action Center:** Cảnh báo CPA Spike và cơ hội Scale tức thì.
+  * **Creative Spotlight:** Cặp đối chiếu Winner vs Fatigue.
+* **Kiến trúc 5 phân hệ tối giản (Simple Mode):**
+  1. 🏠 Command Center (Hero)
+  2. 📊 Quảng cáo (Ads)
+  3. 🎬 Kho nội dung (Creatives)
+  4. 🤖 AI Marketing Agent
+  5. ⚙️ Cài đặt & Kết nối
+* **Toggle Chuyển đổi Simple / Pro Mode:** Newbie dùng Simple Mode không bị choáng ngợp; Agency bật Pro Mode để mở khóa Pivot Analytics và Breakdown sâu.
+* **Smart Jargon Glossary:** Giải thích bình dân các thuật ngữ CPA, ROAS, Hook Rate 3s, Frequency/Fatigue.
+
+#### Phase 2 — Frictionless OAuth Connect Flow
+* Xóa bỏ hoàn toàn rào cản copy-paste Access Token kỹ thuật cho người mới.
+* Modal kết nối 1-Click:
+  * 🔵 **Kết nối Meta Ads** qua popup Facebook Login, chọn Ad Account trực quan.
+  * 🎵 **Kết nối TikTok Ads** qua TikTok for Business Login, tự động liên kết Advertiser ID.
+* Gắn nhãn minh bạch: *"Demo Simulation Mode — an toàn tuyệt đối, chưa trừ tiền thật"*.
+
+#### Phase 3 — Action Engine + Approval Center + Activity Stepper
+* **Clarification State Machine:** Hỏi lần lượt từng câu (Sản phẩm → Ngân sách → Thời gian) khi người dùng ra lệnh thiếu thông tin.
+* **7-Phase Plan Generator:** Phân tích, Chiến lược, Creative, Khởi tạo, Quét Policy, Launch, Giám sát.
+* **Approval Center Gate (`#approvalModal`):** Tuân thủ Rule #3 & #4 (AI không bao giờ tự ý tiêu tiền nếu chưa có xác nhận từ người dùng).
+* **Activity Center (`#activityModal`):** Hiển thị tiến trình thực thi từng bước bằng Stepper động, tự động cập nhật dữ liệu vào Unified Data Model.
+* **Activity Log & Action Rollback (Undo):** Mọi hành động can thiệp (tạo mới, đổi budget, tắt ad) đều được lưu log và có nút `[ ↩️ Hoàn tác / UNDO ]`.
+
+#### Phase 4 — Autopilot Automation & Kill Switch
+* **3 Cấp độ Automation:**
+  1. *Copilot:* AI chỉ đóng vai trò tư vấn, người dùng tự làm.
+  2. *Assisted Autopilot (Mặc định):* AI phân tích, soạn sẵn hành động, người dùng bấm 1 nút duyệt để AI thực hiện.
+  3. *Full Autopilot:* AI tự động tối ưu trong giới hạn an toàn nghiêm ngặt (ngân sách ±15% / 48h, chi tiêu tối đa ≤ 500.000₫/ngày).
+* **Emergency Kill Switch (`🛑 STOP AUTOPILOT`):** Nút dừng khẩn cấp thường trực trên thanh điều hướng, lập tức đóng băng toàn bộ tác vụ tự động chỉ với 1 click.
+
+### 11.3. Tám Quy tắc Cốt lõi Bất khả Xâm phạm
+1. **Rule 1:** Newbie không cần hiểu Ads Manager vẫn sử dụng được NTDAds.
+2. **Rule 2:** AI tuyệt đối không bịa số liệu (Zero Hallucination).
+3. **Rule 3:** AI không tự tiêu tiền nếu chưa được duyệt.
+4. **Rule 4:** Mọi hành động can thiệp đều có Preview + Approval + Rollback (Undo).
+5. **Rule 5:** Không hiển thị technical complexity trong Simple Mode.
+6. **Rule 6:** Thiếu thông tin, AI hỏi từng câu một thay vì tự đoán.
+7. **Rule 7:** Khi ở chế độ Demo/Mock phải ghi rõ là Demo/Mock.
+8. **Rule 8:** Ưu tiên hành động và kết quả kinh doanh thực tế, không chạy đua số lượng màn hình.
+
+

@@ -36,7 +36,8 @@
         chartGranularity: 'daily',
         pivotDimension: 'campaign',
         pivotMetrics: ['spend', 'revenue', 'roas', 'cpa', 'ctr', 'conversions'],
-        activeScreen: 'screen-dashboard',
+        activeScreen: 'screen-command-center',
+        uiMode: 'simple',
         isLiveMode: false,
         metaAccountId: 'act_1029384756',
         tiktokAdvId: '7298374829103'
@@ -304,7 +305,13 @@
       this.exportEngine = window.AdsAI.ExportEngine;
       this.chartManager = new ChartManager();
 
-      this.currentScreenId = this.stateStore.get('activeScreen', 'screen-dashboard');
+      this.currentScreenId = this.stateStore.get('activeScreen', 'screen-command-center');
+      this.uiMode = this.stateStore.get('uiMode', 'simple');
+      this.autopilotManager = new window.AdsAI.AutopilotManager(this.dataEngine);
+      this.clarificationMachine = new window.AdsAI.ClarificationStateMachine();
+      this.currentPlan = null;
+      this.isVoiceListening = false;
+
       this.activeCampaignId = null;
       this.activeCreativeId = null;
 
@@ -321,11 +328,14 @@
     }
 
     async init() {
-      console.log('🚀 Initializing ADS AI MANAGER...');
+      console.log('🚀 Initializing NTDAds AI Marketing Agent...');
 
       // Setup router and event listeners
       this.setupGlobalEvents();
       this.setupFilterEvents();
+
+      // Apply initial UI mode (Simple vs Pro)
+      this.applyUIMode(this.uiMode);
 
       // Listen to data engine changes
       this.dataEngine.subscribe(() => {
@@ -339,6 +349,33 @@
       this.updateWorkspaceHeader();
     }
 
+    applyUIMode(mode) {
+      this.uiMode = mode;
+      this.stateStore.set('uiMode', mode);
+
+      const simpleBtn = document.getElementById('toggleSimpleModeBtn');
+      const proBtn = document.getElementById('toggleProModeBtn');
+      const proSidebar = document.getElementById('proSidebarSection');
+
+      if (mode === 'pro') {
+        if (proSidebar) proSidebar.classList.remove('hidden');
+        if (simpleBtn) {
+          simpleBtn.className = "px-3 py-1 font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
+        }
+        if (proBtn) {
+          proBtn.className = "px-3 py-1 font-bold rounded-lg transition bg-indigo-600 text-white shadow-xs";
+        }
+      } else {
+        if (proSidebar) proSidebar.classList.add('hidden');
+        if (simpleBtn) {
+          simpleBtn.className = "px-3 py-1 font-bold rounded-lg transition bg-white text-indigo-700 shadow-xs";
+        }
+        if (proBtn) {
+          proBtn.className = "px-3 py-1 font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
+        }
+      }
+    }
+
     updateWorkspaceHeader() {
       const wsName = this.stateStore.get('workspaceName', 'Kstudy E-commerce Group');
       const wsBadge = document.getElementById('currentWorkspaceName');
@@ -346,7 +383,7 @@
     }
 
     // ------------------------------------------------------------------------
-    // NAVIGATION ROUTER (Across all 18 Screens)
+    // NAVIGATION ROUTER (Across all Screens)
     // ------------------------------------------------------------------------
     navigateTo(screenId) {
       const screens = document.querySelectorAll('.app-screen');
@@ -354,8 +391,8 @@
 
       const target = document.getElementById(screenId);
       if (!target) {
-        console.warn(`Screen ${screenId} not found, falling back to dashboard.`);
-        screenId = 'screen-dashboard';
+        console.warn(`Screen ${screenId} not found, falling back to command center.`);
+        screenId = 'screen-command-center';
       }
 
       const activeEl = document.getElementById(screenId);
@@ -393,7 +430,9 @@
       const titleMap = {
         'screen-login': ['Tài khoản', 'Đăng nhập vào hệ thống'],
         'screen-workspace': ['Workspace', 'Quản lý Không gian làm việc'],
-        'screen-dashboard': ['Tổng quan', 'Bảng điều khiển hiệu suất quảng cáo'],
+        'screen-command-center': ['Command Center', 'AI Command Center — Quản trị Quảng cáo Bằng Mục tiêu'],
+        'screen-agent': ['AI Agent', 'NTDAds AI Marketing Agent — Planner & Lịch sử Thực thi'],
+        'screen-dashboard': ['Tổng quan', 'Bảng điều khiển hiệu suất quảng cáo (Pro Hub)'],
         'screen-campaigns': ['Chiến dịch', 'Quản lý danh sách Chiến dịch'],
         'screen-campaign-detail': ['Chiến dịch', 'Phân tích chuyên sâu Chiến dịch'],
         'screen-ad-sets': ['Ad Sets', 'Nhóm Quảng cáo Chuẩn hóa'],
@@ -430,6 +469,12 @@
     // ------------------------------------------------------------------------
     async refreshCurrentScreen() {
       switch (this.currentScreenId) {
+        case 'screen-command-center':
+          await this.renderCommandCenter();
+          break;
+        case 'screen-agent':
+          await this.renderAgentWorkspace();
+          break;
         case 'screen-dashboard':
           await this.renderDashboard();
           break;
@@ -479,6 +524,98 @@
           await this.renderSettings();
           break;
       }
+    }
+
+    // ------------------------------------------------------------------------
+    // SCREEN: AI COMMAND CENTER (HERO SCREEN)
+    // ------------------------------------------------------------------------
+    async renderCommandCenter() {
+      const kpiData = await this.dataEngine.getExecutiveKPIs();
+      const cur = kpiData.current;
+
+      const setEl = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+
+      setEl('cmd-kpi-revenue', window.AdsAI.MetricsCalc.formatVND(cur.revenue));
+      setEl('cmd-kpi-spend', window.AdsAI.MetricsCalc.formatVND(cur.spend));
+      setEl('cmd-kpi-profit', window.AdsAI.MetricsCalc.formatProfit(cur.estimatedProfit));
+
+      // Health Score Calculation
+      const campaigns = await this.dataEngine.getCampaignsWithMetrics();
+      const creatives = await this.dataEngine.getAllCreatives();
+      const ruleEval = window.AdsAI.RuleEngine.evaluatePortfolio(campaigns, creatives, kpiData);
+      const score = ruleEval.overallHealthScore || 84;
+
+      setEl('cmd-kpi-health', score);
+      const bar = document.getElementById('cmd-kpi-health-bar');
+      if (bar) {
+        bar.style.width = `${score}%`;
+        if (score >= 75) bar.className = "bg-gradient-to-r from-emerald-500 to-indigo-600 h-2 rounded-full";
+        else if (score >= 50) bar.className = "bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full";
+        else bar.className = "bg-gradient-to-r from-rose-500 to-rose-600 h-2 rounded-full";
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // SCREEN: AI MARKETING AGENT WORKSPACE
+    // ------------------------------------------------------------------------
+    async renderAgentWorkspace() {
+      this.renderActivityLogTable();
+      this.updateAutopilotTierUI(this.autopilotManager.getMode());
+    }
+
+    renderActivityLogTable() {
+      const tbody = document.getElementById('activityLogTableBody');
+      if (!tbody) return;
+
+      const logs = this.dataEngine.getActivityLog();
+      if (!logs || logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">Chưa có hành động nào được ghi nhận.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = logs.map(l => `
+        <tr class="hover:bg-slate-50/80 transition">
+          <td class="py-3 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">${l.timestamp}</td>
+          <td class="py-3 px-4">
+            <span class="inline-flex items-center gap-1 font-bold ${l.agent.includes('Autopilot') ? 'text-purple-600' : 'text-indigo-600'}">
+              <span>🤖</span> <span>${l.agent}</span>
+            </span>
+          </td>
+          <td class="py-3 px-4 font-bold text-slate-900">${l.title}</td>
+          <td class="py-3 px-4 text-slate-500 text-[11px] max-w-xs truncate" title="${l.description}">${l.description}</td>
+          <td class="py-3 px-4 whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${l.userApproved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
+              ${l.userApproved ? '✓ Đã duyệt' : 'Tự động'}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-center whitespace-nowrap">
+            ${l.canUndo ? `
+              <button onclick="window.undoAction('${l.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg transition border border-slate-200">
+                ↩️ Hoàn tác
+              </button>
+            ` : `
+              <span class="text-[10px] text-slate-400 font-medium">${l.status === 'REVERTED' ? 'Đã hoàn tác' : 'Không khả dụng'}</span>
+            `}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    updateAutopilotTierUI(tier) {
+      ['COPILOT', 'ASSISTED', 'AUTOPILOT'].forEach(t => {
+        const card = document.getElementById(`tierCard-${t}`);
+        if (!card) return;
+        if (t === tier) {
+          card.className = "p-5 rounded-2xl border-2 border-indigo-600 bg-indigo-50/30 cursor-pointer transition space-y-2";
+        } else {
+          card.className = "p-5 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 cursor-pointer transition space-y-2";
+        }
+      });
+      const badge = document.getElementById('agentActiveBadge');
+      if (badge) badge.textContent = `${tier} MODE`;
     }
 
     // ------------------------------------------------------------------------
@@ -1145,6 +1282,445 @@
       this.exportEngine.printReport();
     }
   }
+
+  // --------------------------------------------------------------------------
+  // GLOBAL AI AGENT BRIDGE FUNCTIONS & EVENT HANDLERS
+  // --------------------------------------------------------------------------
+  
+  // 1. UI Mode Switcher (Simple vs Pro)
+  window.setUIMode = function(mode) {
+    if (window.app) {
+      window.app.applyUIMode(mode);
+    }
+  };
+
+  // 2. Command Center: Submit Command
+  window.submitCommandCenter = function() {
+    const input = document.getElementById('cmdInputHero');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) {
+      alert('Vui lòng nhập mục tiêu hoặc yêu cầu của bạn!');
+      input.focus();
+      return;
+    }
+
+    const parsed = window.AdsAI.AICommandParser.parse(text);
+    const MetricsCalc = window.AdsAI.MetricsCalc;
+
+    // Handle Intent: CREATE_CAMPAIGN
+    if (parsed.intent === 'CREATE_CAMPAIGN') {
+      const slots = parsed.slots;
+      // Check if missing critical slots: product, budget, or duration
+      if (!slots.product || !slots.budget || !slots.duration) {
+        const qRes = window.app.clarificationMachine.start(slots);
+        const clarBox = document.getElementById('clarificationContainer');
+        const qText = document.getElementById('clarificationQuestionText');
+        const ansInput = document.getElementById('clarificationAnswerInput');
+
+        if (clarBox && qText) {
+          qText.innerHTML = `<strong>🤖 AI Copilot:</strong> ${qRes.question}`;
+          clarBox.classList.remove('hidden');
+          if (ansInput) {
+            ansInput.value = '';
+            ansInput.focus();
+          }
+          clarBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        return;
+      }
+
+      // If all slots are present, generate 7-phase plan immediately
+      window.renderGeneratedPlan(slots);
+      return;
+    }
+
+    // Handle Intent: STOP_LOSING
+    if (parsed.intent === 'STOP_LOSING') {
+      window.prepareActionApproval({
+        title: 'Tạm dừng các Ad Set đang tiêu tiền nhưng hiệu quả thấp',
+        actions: [
+          'Tạm dừng Ad Set "GenZ Streetwear - Interest Test" (CPA: 74.000₫, 0 đơn trong 48h qua)',
+          'Chuyển 500.000₫ ngân sách còn lại về chiến dịch Top ROAS "Lookbook Thu Đông 2026"'
+        ],
+        budgetLabel: 'Tiết kiệm ước tính: ~500.000₫ / ngày',
+        onConfirm: async () => {
+          await window.app.dataEngine.pauseEntityDynamic('adSet', 'as_meta_03');
+          alert('✅ Đã tạm dừng Ad Set thành công! Đã ghi nhận vào Activity Log.');
+          window.app.refreshCurrentScreen();
+        }
+      });
+      return;
+    }
+
+    // Handle Intent: SCALE_WINNERS
+    if (parsed.intent === 'SCALE_WINNERS') {
+      window.prepareActionApproval({
+        title: 'Tăng ngân sách cho chiến dịch Winner',
+        actions: [
+          'Tăng ngân sách chiến dịch "Unboxing Áo Thun Oversize (TikTok)" từ 2.000.000₫ lên 2.300.000₫ (+15%)',
+          'Duy trì tần suất Frequency an toàn < 2.0 để bảo vệ hiệu quả'
+        ],
+        budgetLabel: 'Ngân sách mới: 2.300.000₫ / ngày',
+        onConfirm: async () => {
+          await window.app.dataEngine.updateBudgetDynamic('campaign', 'cmp_tiktok_01', 2300000);
+          alert('✅ Đã tăng 15% ngân sách thành công! Đã ghi nhận vào Activity Log.');
+          window.app.refreshCurrentScreen();
+        }
+      });
+      return;
+    }
+
+    // Handle Intent: PROFIT_CHECK
+    if (parsed.intent === 'PROFIT_CHECK') {
+      window.app.navigateTo('screen-agent');
+      window.app.handleAskUserQuestion('Hôm nay tài khoản của tôi lời hay lỗ?');
+      return;
+    }
+
+    // Handle Intent: GENERATE_REPORT
+    if (parsed.intent === 'GENERATE_REPORT') {
+      window.app.navigateTo('screen-reports');
+      return;
+    }
+
+    // Handle Intent: GENERATE_CREATIVES
+    if (parsed.intent === 'GENERATE_CREATIVES') {
+      window.app.navigateTo('screen-creatives');
+      return;
+    }
+
+    // Default: Forward to AI Assistant
+    window.app.navigateTo('screen-agent');
+    window.app.handleAskUserQuestion(text);
+  };
+
+  // 3. Quick Suggestion Pills Filler
+  window.fillAndSubmitCmd = function(text) {
+    const input = document.getElementById('cmdInputHero');
+    if (input) {
+      input.value = text;
+      window.submitCommandCenter();
+    }
+  };
+
+  // 4. Voice Simulation Toggle
+  window.toggleVoiceSimulation = function() {
+    const btn = document.getElementById('cmdMicBtn');
+    const input = document.getElementById('cmdInputHero');
+    if (!btn || !input) return;
+
+    if (!window.app.isVoiceListening) {
+      window.app.isVoiceListening = true;
+      btn.className = "w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center transition animate-pulse";
+      input.placeholder = "🎙️ Đang lắng nghe giọng nói của bạn... Hãy nói mục tiêu chạy ads...";
+      
+      // Simulate voice transcription after 2 seconds
+      setTimeout(() => {
+        if (window.app.isVoiceListening) {
+          input.value = "Tôi muốn bán 100 đôi giày trong tháng này, ngân sách 15 triệu, chạy Facebook và TikTok";
+          btn.className = "w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition";
+          input.placeholder = "Tôi muốn...";
+          window.app.isVoiceListening = false;
+        }
+      }, 2200);
+    } else {
+      window.app.isVoiceListening = false;
+      btn.className = "w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition";
+      input.placeholder = "Tôi muốn...";
+    }
+  };
+
+  // 5. Submit Clarification Answer
+  window.submitClarificationAnswer = function() {
+    const ansInput = document.getElementById('clarificationAnswerInput');
+    if (!ansInput) return;
+    const ans = ansInput.value.trim();
+    if (!ans) {
+      alert('Vui lòng nhập câu trả lời!');
+      return;
+    }
+
+    const res = window.app.clarificationMachine.answer(ans);
+    const clarBox = document.getElementById('clarificationContainer');
+    const qText = document.getElementById('clarificationQuestionText');
+
+    if (res.status === 'NEED_CLARIFICATION') {
+      qText.innerHTML = `<strong>🤖 AI Copilot:</strong> ${res.question}`;
+      ansInput.value = '';
+      ansInput.focus();
+    } else if (res.status === 'READY') {
+      clarBox.classList.add('hidden');
+      window.renderGeneratedPlan(res.planParams);
+    }
+  };
+
+  // 6. Render Generated 7-Phase Plan
+  window.renderGeneratedPlan = function(params) {
+    const plan = window.AdsAI.PlanGenerator.generate(params);
+    window.app.currentPlan = plan;
+
+    const planBox = document.getElementById('commandPlanBox');
+    const titleHdr = document.getElementById('planTitleHeader');
+    const subHdr = document.getElementById('planSubtitleHeader');
+    const phasesList = document.getElementById('planPhasesList');
+    const MetricsCalc = window.AdsAI.MetricsCalc;
+
+    if (titleHdr) titleHdr.textContent = plan.campaignName;
+    if (subHdr) {
+      subHdr.textContent = `Mục tiêu: ${plan.targetOrders} đơn hàng • Ngân sách: ${MetricsCalc.formatVND(plan.budget)} (${plan.duration} ngày) • Kênh: Meta + TikTok`;
+    }
+
+    if (phasesList) {
+      phasesList.innerHTML = plan.phases.map(p => `
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-extrabold text-[11px] text-indigo-700 uppercase tracking-wider">Giai đoạn ${p.phase} • ${p.name}</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'READY' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}">${p.status}</span>
+          </div>
+          <ul class="space-y-1 text-slate-600 text-[11px]">
+            ${p.items.map(it => `<li class="flex items-start gap-1.5"><span class="text-indigo-500 font-bold">•</span><span>${it}</span></li>`).join('')}
+          </ul>
+        </div>
+      `).join('');
+    }
+
+    if (planBox) {
+      planBox.classList.remove('hidden');
+      planBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  window.editPlanPrompt = function() {
+    const input = document.getElementById('cmdInputHero');
+    if (input) {
+      input.focus();
+      alert('Bạn có thể chỉnh sửa lại mục tiêu, sản phẩm hoặc ngân sách trong ô nhập bên trên.');
+    }
+  };
+
+  // 7. Approval Center Modal Handlers
+  window.pendingActionApproval = null;
+
+  window.openApprovalModalFromPlan = function() {
+    const plan = window.app.currentPlan;
+    if (!plan) return;
+
+    window.prepareActionApproval({
+      title: 'Khởi tạo Chiến dịch Quảng cáo Mới',
+      actions: [
+        `Tạo 2 Chiến dịch chuẩn hóa: ${plan.campaignName}`,
+        `Tạo 4 Ad Sets (Phân bổ 60% Meta: ${window.AdsAI.MetricsCalc.formatVND(plan.metaBudget)} • 40% TikTok: ${window.AdsAI.MetricsCalc.formatVND(plan.tiktokBudget)})`,
+        `Tạo 8 Ads đa dạng biến thể nội dung Video dọc 9:16 & Carousel`,
+        `Thiết lập mục tiêu CPA tối ưu <= ${window.AdsAI.MetricsCalc.formatVND(plan.targetCPA)} / đơn`
+      ],
+      budgetLabel: `Tổng ngân sách: ${window.AdsAI.MetricsCalc.formatVND(plan.budget)} (${plan.duration} ngày)`,
+      onConfirm: async () => {
+        window.startActivityCenterExecution(plan);
+      }
+    });
+  };
+
+  window.prepareActionApproval = function({ title, actions, budgetLabel, onConfirm }) {
+    window.pendingActionApproval = onConfirm;
+    const modal = document.getElementById('approvalModal');
+    const list = document.getElementById('approvalModalActionsList');
+    const budgetEl = document.getElementById('approvalBudgetLabel');
+
+    if (list) {
+      list.innerHTML = actions.map(act => `
+        <div class="flex items-center gap-2">
+          <span class="text-indigo-600 font-bold">✓</span>
+          <span>${act}</span>
+        </div>
+      `).join('');
+    }
+    if (budgetEl && budgetLabel) budgetEl.textContent = budgetLabel;
+    if (modal) modal.classList.remove('hidden');
+  };
+
+  window.closeApprovalModal = function() {
+    const modal = document.getElementById('approvalModal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  window.confirmApprovalAndExecute = async function() {
+    window.closeApprovalModal();
+    if (typeof window.pendingActionApproval === 'function') {
+      await window.pendingActionApproval();
+      window.pendingActionApproval = null;
+    }
+  };
+
+  // 8. Activity Center Stepper Execution (Phase 3: Section 10)
+  window.startActivityCenterExecution = function(plan) {
+    const modal = document.getElementById('activityModal');
+    const statusText = document.getElementById('activityModalStatusText');
+    const banner = document.getElementById('activitySuccessBanner');
+    const closeBtn = document.getElementById('activityCloseBtn');
+
+    if (banner) banner.classList.add('hidden');
+    if (statusText) statusText.textContent = 'Đang triển khai chiến dịch...';
+    if (closeBtn) {
+      closeBtn.textContent = 'Đang xử lý (vui lòng chờ)...';
+      closeBtn.className = "w-full py-2.5 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed";
+      closeBtn.onclick = null;
+    }
+
+    if (modal) modal.classList.remove('hidden');
+
+    const updateStep = (idx, text, done = false) => {
+      const el = document.getElementById(`act-step-${idx}`);
+      if (!el) return;
+      if (done) {
+        el.className = "flex items-center gap-3 text-emerald-600 font-bold transition-all";
+        el.children[0].className = "w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black";
+        el.children[0].textContent = "✓";
+      } else {
+        el.className = "flex items-center gap-3 text-indigo-600 font-bold animate-pulse transition-all";
+        el.children[0].className = "w-6 h-6 rounded-full border-2 border-indigo-600 text-indigo-600 flex items-center justify-center text-[10px] font-bold";
+        el.children[0].textContent = "●";
+      }
+    };
+
+    // Stepper sequence simulation
+    setTimeout(() => updateStep(1, null, true), 300);
+    setTimeout(() => updateStep(2, null, true), 800);
+    setTimeout(() => updateStep(3, null, true), 1300);
+    setTimeout(async () => {
+      updateStep(4, null, true);
+      // Actually mutate data engine
+      if (plan) {
+        await window.app.dataEngine.createCampaignDynamic(plan);
+      }
+    }, 1900);
+    setTimeout(() => {
+      updateStep(5, null, true);
+      if (statusText) statusText.textContent = 'Hoàn tất 100%';
+      if (banner) banner.classList.remove('hidden');
+      if (closeBtn) {
+        closeBtn.textContent = 'Xem Chiến dịch trong Quảng cáo →';
+        closeBtn.className = "w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl shadow-md transition cursor-pointer";
+        closeBtn.onclick = () => {
+          modal.classList.add('hidden');
+          window.app.navigateTo('screen-campaigns');
+        };
+      }
+    }, 2600);
+  };
+
+  window.closeActivityModal = function() {
+    const modal = document.getElementById('activityModal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  // 9. Quick Actions from Action Center
+  window.triggerQuickPauseAdSet = function(adSetId) {
+    window.prepareActionApproval({
+      title: 'Tạm dừng Ad Set hiệu quả thấp',
+      actions: [
+        'Tạm dừng ngay Ad Set "GenZ Streetwear - Interest Test" (Meta Ads)',
+        'Lý do: CPA tăng 38% và không có chuyển đổi mới trong 48 giờ'
+      ],
+      budgetLabel: 'Giảm lãng phí: ~350.000₫ / ngày',
+      onConfirm: async () => {
+        await window.app.dataEngine.pauseEntityDynamic('adSet', adSetId);
+        alert('✅ Đã tạm dừng Ad Set thành công!');
+        window.app.refreshCurrentScreen();
+      }
+    });
+  };
+
+  window.triggerQuickScale = function(campaignId) {
+    window.prepareActionApproval({
+      title: 'Tăng ngân sách chiến dịch Tiềm năng (Winner)',
+      actions: [
+        'Tăng 15% ngân sách cho chiến dịch "Unboxing Áo Thun Oversize" (TikTok Ads)',
+        'Lý do: ROAS đạt 3.50x, Hook Rate 71.8% vượt trội'
+      ],
+      budgetLabel: 'Ngân sách mới: 2.300.000₫ / ngày',
+      onConfirm: async () => {
+        await window.app.dataEngine.updateBudgetDynamic('campaign', campaignId, 2300000);
+        alert('✅ Đã tăng ngân sách thành công!');
+        window.app.refreshCurrentScreen();
+      }
+    });
+  };
+
+  window.showCauseModal = function(type) {
+    window.app.navigateTo('screen-agent');
+    window.app.handleAskUserQuestion('Tại sao CPA tuần này tăng?');
+  };
+
+  // 10. Undo Rollback Action
+  window.undoAction = async function(logId) {
+    const res = await window.app.dataEngine.revertAction(logId);
+    if (res.success) {
+      alert(`↩️ ${res.message}`);
+      window.app.renderAgentWorkspace();
+      window.app.refreshCurrentScreen();
+    } else {
+      alert(`❌ ${res.message}`);
+    }
+  };
+
+  // 11. Autopilot Kill Switch & Tier Configuration
+  window.triggerKillSwitch = function() {
+    const res = window.app.autopilotManager.stopAutopilot();
+    alert(`🛑 ${res.message}`);
+    window.app.updateAutopilotTierUI('COPILOT');
+  };
+
+  window.setAutopilotTier = function(tier) {
+    window.app.autopilotManager.setMode(tier);
+    window.app.updateAutopilotTierUI(tier);
+    alert(`✅ Đã thiết lập cấp độ Autopilot sang: ${tier}`);
+  };
+
+  window.switchAgentTab = function(tabName) {
+    ['chat', 'activity', 'autopilot'].forEach(t => {
+      const btn = document.getElementById(`agentTabBtn-${t}`);
+      const content = document.getElementById(`agentTabContent-${t}`);
+      if (btn && content) {
+        if (t === tabName) {
+          btn.className = "px-3 py-1.5 rounded-xl bg-white text-indigo-700 shadow-xs transition font-bold";
+          content.classList.remove('hidden');
+        } else {
+          btn.className = "px-3 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition font-medium";
+          content.classList.add('hidden');
+        }
+      }
+    });
+
+    if (tabName === 'activity') {
+      window.app.renderActivityLogTable();
+    }
+  };
+
+  // 12. OAuth 1-Click Connect Handlers
+  window.openOAuthModal = function() {
+    const modal = document.getElementById('oauthModal');
+    if (modal) modal.classList.remove('hidden');
+  };
+
+  window.simulateOAuthConnect = function(platform) {
+    const pName = platform === 'meta' ? 'Meta Ads' : 'TikTok Ads';
+    const accName = platform === 'meta' ? 'Kstudy Fashion Official' : 'Kstudy Shop Vietnam';
+    
+    // Simulate instantaneous authorization
+    alert(`🔐 Đang xác thực OAuth 2.0 với ${pName}...\n✓ Đã cấp quyền: ads_read, ads_management\n✓ Đã liên kết tài khoản: ${accName}\n=> Kết nối thành công 100%!`);
+    
+    window.app.dataEngine.setOAuthState(platform, { connected: true, accountName: accName, lastSynced: 'Vừa xong' });
+    const modal = document.getElementById('oauthModal');
+    if (modal) modal.classList.add('hidden');
+    window.app.refreshCurrentScreen();
+  };
+
+  // 13. Smart Jargon Glossary Modal
+  window.openJargonModal = function(term) {
+    const modal = document.getElementById('jargonModal');
+    if (modal) modal.classList.remove('hidden');
+  };
 
   // Auto-boot on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
