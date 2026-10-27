@@ -64,6 +64,109 @@ BẠN TUÂN THỦ NGHIÊM NGẶT 6 NGUYÊN TẮC GUARDRAILS:
       };
     }
 
+    getGeminiApiKey() {
+      return localStorage.getItem('ntdads_gemini_api_key') || '';
+    }
+
+    setGeminiApiKey(key) {
+      if (key) {
+        localStorage.setItem('ntdads_gemini_api_key', key.trim());
+      } else {
+        localStorage.removeItem('ntdads_gemini_api_key');
+      }
+    }
+
+    /**
+     * Call Google Gemini 1.5 Flash API with rich live context and Guardrails
+     */
+    async askGemini(userQuestion, contextData) {
+      const apiKey = this.getGeminiApiKey();
+      if (!apiKey) return null;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+      const systemInstruction = `${this.systemPrompt}
+DỮ LIỆU THỰC TẾ HIỆN TẠI TỪ TÀI KHOẢN (CONTEXT_DATA):
+${JSON.stringify(contextData, null, 2)}
+
+HƯỚNG DẪN TRẢ LỜI:
+Hãy phân tích và trả lời câu hỏi của người dùng bằng tiếng Việt, thân thiện nhưng chuyên nghiệp.
+BẮT BUỘC trả về cấu trúc gồm 3 phần rõ ràng:
+[FACT]: Nêu số liệu thực tế đo lường được từ context.
+[HYPOTHESIS]: Phân tích nguyên nhân logic (phễu chuyển đổi CTR, CPC, CVR, Frequency).
+[RECOMMENDATION]: Đưa ra tối đa 3 đề xuất hành động thực tiễn rõ ràng.
+Tuyệt đối không bịa số liệu không có trong context.`;
+
+      try {
+        const payload = {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: `${systemInstruction}\n\nCÂU HỎI CỦA NGƯỜI DÙNG: "${userQuestion}"` }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          }
+        };
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.error("Gemini API Error:", errData);
+          throw new Error(errData.error?.message || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!candidate) throw new Error("Không nhận được phản hồi hợp lệ từ Gemini.");
+
+        // Parse sections from Gemini response
+        let fact = "Dữ liệu được trích xuất từ Gemini 1.5 Flash.";
+        let hypothesis = "Phân tích suy luận từ mô hình AI.";
+        let recommendations = [];
+
+        const factMatch = candidate.match(/\[FACT\]:?([\s\S]*?)(?=\[HYPOTHESIS\]|$)/i);
+        const hypoMatch = candidate.match(/\[HYPOTHESIS\]:?([\s\S]*?)(?=\[RECOMMENDATION\]|$)/i);
+        const recMatch = candidate.match(/\[RECOMMENDATION\]:?([\s\S]*?)$/i);
+
+        if (factMatch && factMatch[1].trim()) fact = factMatch[1].trim();
+        if (hypoMatch && hypoMatch[1].trim()) hypothesis = hypoMatch[1].trim();
+
+        if (recMatch && recMatch[1].trim()) {
+          recommendations = recMatch[1].trim().split('\n')
+            .map(line => line.replace(/^[-*•\d.]+\s*/, '').trim())
+            .filter(line => line.length > 0)
+            .slice(0, 3);
+        }
+
+        if (recommendations.length === 0) {
+          recommendations = ["Theo dõi diễn biến số liệu trong 24-48 giờ tới."];
+        }
+
+        return {
+          fact,
+          hypothesis,
+          recommendations,
+          confidence: "High (Gemini 1.5 Flash)",
+          isGemini: true,
+          rawResponse: candidate,
+          timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        };
+      } catch (err) {
+        console.warn("Falling back to Rule-based AI Engine due to Gemini error:", err.message);
+        return null;
+      }
+    }
+
     /**
      * Answer user questions strictly adhering to Guardrails
      */
@@ -71,6 +174,16 @@ BẠN TUÂN THỦ NGHIÊM NGẶT 6 NGUYÊN TẮC GUARDRAILS:
       const q = (userQuestion || '').trim().toLowerCase();
       const ctx = await this.buildContext();
       const formatVND = window.AdsAI.MetricsCalc.formatVND;
+
+      // 0. If Gemini API Key is configured, use Gemini 1.5 Flash LLM Engine
+      if (this.getGeminiApiKey()) {
+        try {
+          const geminiResult = await this.askGemini(userQuestion, ctx);
+          if (geminiResult) return geminiResult;
+        } catch (e) {
+          console.warn("Gemini Error:", e);
+        }
+      }
 
       // 1. Question: Best Campaign / ROAS cao nhất
       if (q.includes('roas cao nhất') || q.includes('tốt nhất') || q.includes('hiệu quả nhất') || q.includes('winner')) {

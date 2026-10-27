@@ -605,6 +605,23 @@
     async renderAgentWorkspace() {
       this.renderActivityLogTable();
       this.updateAutopilotTierUI(this.autopilotManager.getMode());
+
+      // Update Chat Engine Indicator
+      const dot = document.getElementById('chatEngineIndicatorDot');
+      const text = document.getElementById('chatEngineIndicatorText');
+      const hasGemini = !!this.aiEngine.getGeminiApiKey();
+
+      if (dot && text) {
+        if (hasGemini) {
+          dot.className = "w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse";
+          text.textContent = "✨ Đang dùng: Google Gemini 1.5 Flash (Trí tuệ nhân tạo thế hệ mới)";
+          text.className = "text-xs font-bold text-purple-700";
+        } else {
+          dot.className = "w-2.5 h-2.5 rounded-full bg-slate-400";
+          text.textContent = "Đang dùng: AI Guardrails Mặc định (Offline Rule-based)";
+          text.className = "text-xs font-bold text-slate-700";
+        }
+      }
     }
 
     renderActivityLogTable() {
@@ -1317,6 +1334,24 @@
     async renderSettings() {
       const wsInput = document.getElementById('settingWorkspaceNameInput');
       if (wsInput) wsInput.value = this.stateStore.get('workspaceName', 'Kstudy E-commerce Group');
+
+      // Update Gemini API Key display
+      const geminiInput = document.getElementById('inputGeminiApiKey');
+      const geminiBadge = document.getElementById('geminiStatusBadge');
+      const savedKey = this.aiEngine.getGeminiApiKey();
+
+      if (geminiInput && savedKey) {
+        geminiInput.value = savedKey;
+      }
+      if (geminiBadge) {
+        if (savedKey) {
+          geminiBadge.textContent = "🟢 Đã kích hoạt (Gemini 1.5 Flash)";
+          geminiBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+        } else {
+          geminiBadge.textContent = "Chưa cấu hình (Dùng Offline)";
+          geminiBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700";
+        }
+      }
     }
 
     // ------------------------------------------------------------------------
@@ -1366,6 +1401,25 @@
     if (window.app) {
       window.app.applyUIMode(mode);
     }
+  };
+
+  // Save & Activate Google Gemini API Key
+  window.saveGeminiApiKey = function() {
+    const input = document.getElementById('inputGeminiApiKey');
+    if (!input) return;
+    const key = input.value.trim();
+    if (!key) {
+      if (confirm('Bạn có muốn xóa Gemini API Key và quay về chế độ AI Offline không?')) {
+        window.app.aiEngine.setGeminiApiKey('');
+        alert('Đã xóa Gemini API Key. Hệ thống chuyển về AI Offline.');
+        window.app.refreshCurrentScreen();
+      }
+      return;
+    }
+
+    window.app.aiEngine.setGeminiApiKey(key);
+    alert('🎉 Đã kích hoạt thành công Google Gemini 1.5 Flash! Giờ đây Trợ lý AI có thể suy luận thông minh và trả lời mọi câu hỏi tiếp thị của bạn.');
+    window.app.refreshCurrentScreen();
   };
 
   // Toggle KPI Explanation (Tap-to-expand)
