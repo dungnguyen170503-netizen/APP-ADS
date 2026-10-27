@@ -311,8 +311,10 @@
       this.clarificationMachine = new window.AdsAI.ClarificationStateMachine();
       this.creativeStudioEngine = new window.AdsAI.CreativeStudioEngine(this.aiEngine);
       this.rulesEngine = new window.AdsAI.AIRulesEngine(this.dataEngine, this.aiEngine);
+      this.fatigueEngine = new window.AdsAI.CreativeFatigueEngine(this.dataEngine, this.aiEngine);
       this.activeCreativeTab = 'studio';
       this.currentGeneratedScripts = null;
+      this.currentRefreshVariants = null;
       this.currentPlan = null;
       this.isVoiceListening = false;
 
@@ -1023,6 +1025,9 @@
     // SCREEN 08: CREATIVES LIBRARY & AI HOOK STUDIO
     // ------------------------------------------------------------------------
     async renderCreatives() {
+      // 0. Render Fatigue Radar Header
+      await this.renderFatigueRadar();
+
       // 1. Render Library Grid
       const creatives = await this.dataEngine.getAllCreatives();
       const grid = document.getElementById('creativesGridContainer');
@@ -1034,7 +1039,7 @@
           else if (cr.status === 'WATCH') badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
 
           return `
-            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer" onclick="window.app.openCreativeDetail('${cr.id}')">
+            <div class="bg-white rounded-2xl border ${cr.status === 'FATIGUE' ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'} overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer" onclick="window.app.openCreativeDetail('${cr.id}')">
               <div>
                 <div class="relative h-44 bg-slate-900 overflow-hidden">
                   <img src="${cr.url}" alt="${cr.name}" class="w-full h-full object-cover opacity-90 hover:scale-105 transition duration-300" />
@@ -1054,14 +1059,21 @@
                     </div>
                     <div>
                       <span class="text-[10px] text-slate-400 block">Tần suất (Freq)</span>
-                      <strong class="font-bold ${cr.frequency >= 2.5 ? 'text-rose-600' : 'text-slate-800'}">${cr.frequency.toFixed(1)}</strong>
+                      <strong class="font-bold ${cr.frequency >= 2.2 ? 'text-rose-600' : 'text-slate-800'}">${cr.frequency.toFixed(1)}</strong>
                     </div>
                   </div>
                 </div>
               </div>
               <div class="bg-slate-50 px-4 py-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold">
                 <span class="text-slate-600">ROAS: <strong class="text-indigo-600">${cr.roas}</strong></span>
-                <span class="text-indigo-600 hover:underline">Chi tiết →</span>
+                <div class="flex items-center gap-2">
+                  ${cr.status === 'FATIGUE' ? `
+                    <button onclick="event.stopPropagation(); window.openCreativeRefreshModal('${cr.id}')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] rounded-lg shadow-xs flex items-center gap-1 animate-pulse" title="Tần suất cao, mỏi nội dung - Bấm để làm mới ngay!">
+                      <span>🔄 Làm mới</span>
+                    </button>
+                  ` : ''}
+                  <span class="text-indigo-600 hover:underline">Chi tiết →</span>
+                </div>
               </div>
             </div>
           `;
@@ -1072,6 +1084,48 @@
       const resultsArea = document.getElementById('studioResultsArea');
       if (resultsArea && (!resultsArea.children.length || !this.currentGeneratedScripts)) {
         await this.generateStudioScripts();
+      }
+    }
+
+    /**
+     * Render Creative Fatigue Radar
+     */
+    async renderFatigueRadar() {
+      if (!this.fatigueEngine) return;
+      try {
+        const radar = await this.fatigueEngine.analyzeRadar();
+        const freshEl = document.getElementById('radarFreshCount');
+        const watchEl = document.getElementById('radarWatchCount');
+        const fatigueEl = document.getElementById('radarFatigueCount');
+
+        if (freshEl) freshEl.textContent = radar.freshCount;
+        if (watchEl) watchEl.textContent = radar.watchCount;
+        if (fatigueEl) fatigueEl.textContent = radar.fatiguedCount;
+
+        const alertBox = document.getElementById('radarFatigueAlertBox');
+        const alertTitle = document.getElementById('radarFatigueAlertTitle');
+        const alertDesc = document.getElementById('radarFatigueAlertDesc');
+        const actionBtn = document.getElementById('radarFatigueActionBtn');
+
+        if (alertBox) {
+          if (radar.fatiguedCount > 0 && radar.primaryFatigued) {
+            const pf = radar.primaryFatigued;
+            if (alertTitle) {
+              alertTitle.textContent = `🚨 BÁO ĐỘNG CHAI MỎI: "${pf.name}" (Tần suất: ${pf.frequency.toFixed(1)}x)`;
+            }
+            if (alertDesc) {
+              alertDesc.textContent = `Khách hàng đã xem quảng cáo này trung bình ${pf.frequency.toFixed(1)} lần. Tỷ lệ tương tác Hook 3s giảm còn ${pf.hookRate}% và CPA đang tăng vọt. Bấm nút bên cạnh để AI làm mới Hook ngay!`;
+            }
+            if (actionBtn) {
+              actionBtn.onclick = () => window.openCreativeRefreshModal(pf.id);
+            }
+            alertBox.classList.remove('hidden');
+          } else {
+            alertBox.classList.add('hidden');
+          }
+        }
+      } catch (err) {
+        console.error('Error rendering Fatigue Radar:', err);
       }
     }
 
@@ -1288,6 +1342,9 @@
               <strong class="font-bold block uppercase text-[11px] text-rose-700">🚨 CẢNH BÁO CREATIVE FATIGUE</strong>
               <p>Creative này đã bị bão hòa tần suất hiển thị (${cr.frequency.toFixed(1)} lần/người). Tỷ lệ Hook 3s sụt giảm và CPA bắt đầu tăng cao.</p>
               <p class="font-semibold">Đề xuất: Thay đổi Hook 3 giây đầu tiên với góc nhìn mới hoặc tắt creative để phân bổ ngân sách sang video WINNER.</p>
+              <button onclick="window.openCreativeRefreshModal('${cr.id}')" class="w-full mt-2 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 animate-pulse">
+                <span>🔄 BẬT AI LÀM MỚI BIẾN THỂ (AUTO-REFRESH REPLACER)</span>
+              </button>
             </div>
           `;
         } else {
@@ -2412,6 +2469,152 @@ ${sc.psychologicalTrigger || 'Tập trung kích thích cảm xúc và giữ châ
       </div>
     `;
     container.classList.remove('hidden');
+  };
+
+  // =========================================================================
+  // SECTION 16: CREATIVE FATIGUE RADAR & AUTO-REFRESH MODAL HANDLERS
+  // =========================================================================
+  window.currentRefreshCreative = null;
+  window.currentRefreshVariants = [];
+
+  window.openCreativeRefreshModal = async function(creativeId) {
+    const modal = document.getElementById('creativeRefreshModal');
+    if (!modal) return;
+
+    const creatives = await window.app.dataEngine.getAllCreatives();
+    let target = creatives.find(c => c.id === creativeId);
+    if (!target) {
+      target = creatives.find(c => c.status === 'FATIGUE') || creatives[0];
+    }
+    if (!target) return;
+
+    window.currentRefreshCreative = target;
+
+    // Fill current creative info
+    const thumbEl = document.getElementById('refreshModalThumb');
+    const platEl = document.getElementById('refreshModalPlatform');
+    const nameEl = document.getElementById('refreshModalName');
+    const headEl = document.getElementById('refreshModalHeadline');
+    const freqEl = document.getElementById('refreshModalFreq');
+    const hookEl = document.getElementById('refreshModalHook');
+
+    if (thumbEl) thumbEl.src = target.url;
+    if (platEl) {
+      platEl.textContent = target.platform.toUpperCase();
+      platEl.className = `px-2 py-0.5 rounded text-[10px] font-bold ${target.platform === 'meta' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}`;
+    }
+    if (nameEl) nameEl.textContent = target.name;
+    if (headEl) headEl.textContent = `"${target.headline}"`;
+    if (freqEl) freqEl.textContent = target.frequency.toFixed(1);
+    if (hookEl) hookEl.textContent = target.hookRate + '%';
+
+    // Show loading state in list
+    const listEl = document.getElementById('refreshVariantsList');
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-2 animate-pulse">
+          <div class="text-2xl">🪄</div>
+          <p class="font-bold text-slate-800 text-xs">AI đang sinh 3 biến thể Hook & Angle chuyển đổi cao...</p>
+          <p class="text-[11px] text-slate-400">Áp dụng công thức 3s đầu giữ chân và giải phóng bão hòa</p>
+        </div>
+      `;
+    }
+
+    modal.classList.remove('hidden');
+
+    try {
+      const variants = await window.app.fatigueEngine.generateRefreshVariants(target);
+      window.currentRefreshVariants = variants;
+      window.renderRefreshVariants(variants, target.id);
+    } catch (err) {
+      console.error('Error generating variants:', err);
+      if (listEl) {
+        listEl.innerHTML = `<div class="p-4 bg-rose-50 text-rose-800 text-xs rounded-xl">⚠️ Lỗi sinh biến thể: ${err.message}</div>`;
+      }
+    }
+  };
+
+  window.renderRefreshVariants = function(variants, creativeId) {
+    const listEl = document.getElementById('refreshVariantsList');
+    if (!listEl) return;
+
+    listEl.innerHTML = variants.map((v, idx) => {
+      return `
+        <div class="p-4 rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 hover:shadow-sm transition space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-extrabold flex items-center justify-center text-xs">${idx + 1}</span>
+              <strong class="text-slate-900 text-xs">${v.title}</strong>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">${v.badge || '✨ Đề xuất'}</span>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs text-slate-700">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Tiêu đề (Headline) mới:</span>
+              <strong class="text-slate-900">"${v.headline}"</strong>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-indigo-500 block">🎬 Hành động 3s đầu (Visual):</span>
+              <p class="text-[11px] text-slate-600">${v.visualAction}</p>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-purple-600 block">🎙️ Lời thoại / Audio Hook:</span>
+              <p class="text-[11px] text-purple-950 italic font-medium">${v.audioHook}</p>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">💡 Chiến thuật (Strategy):</span>
+              <p class="text-[11px] text-slate-500">${v.strategy}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <button onclick="window.copyVariantText(${idx})" class="text-slate-500 hover:text-indigo-600 text-xs font-semibold flex items-center gap-1">
+              📋 Sao chép kịch bản
+            </button>
+            <button onclick="window.applyCreativeRefreshVariant('${creativeId}', ${idx})" class="px-4 py-2 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white font-black text-xs rounded-xl shadow-xs transition flex items-center gap-1.5">
+              <span>⚡ Áp Dụng Thay Thế Trực Tiếp</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  window.copyVariantText = function(idx) {
+    const v = window.currentRefreshVariants[idx];
+    if (!v) return;
+    const txt = `[${v.title}]\n- Tiêu đề: ${v.headline}\n- Visual: ${v.visualAction}\n- Lời thoại: ${v.audioHook}\n- Chiến thuật: ${v.strategy}`;
+    navigator.clipboard.writeText(txt).then(() => {
+      alert('✅ Đã sao chép kịch bản biến thể vào clipboard!');
+    }).catch(() => {
+      alert(txt);
+    });
+  };
+
+  window.applyCreativeRefreshVariant = async function(creativeId, variantIdx) {
+    const v = window.currentRefreshVariants[variantIdx];
+    if (!v) return;
+
+    const confirmed = confirm(`Bạn có chắc muốn áp dụng "${v.title}"?\n\n• Tiêu đề sẽ đổi thành: "${v.headline}"\n• Tần suất hiển thị sẽ được reset về 1.1 để hồi sinh chuyển đổi.\n• Hành động này có thể hoàn tác trong tab Lịch sử (Activity Log).`);
+    if (!confirmed) return;
+
+    const res = await window.app.dataEngine.updateCreativeDynamic(creativeId, {
+      headline: v.headline,
+      name: `${window.currentRefreshCreative.name} (Refreshed: ${v.type})`,
+      hookRate: 78.5
+    });
+
+    if (res) {
+      alert(`🎉 Đã hồi sinh quảng cáo thành công!\nTần suất hiển thị đã reset về 1.1 và trạng thái chuyển sang WINNER.`);
+      document.getElementById('creativeRefreshModal').classList.add('hidden');
+      await window.app.renderCreatives();
+      if (window.app.currentScreen === 'screen-creative-detail') {
+        await window.app.renderCreativeDetail(creativeId);
+      }
+    } else {
+      alert('❌ Có lỗi khi cập nhật Creative.');
+    }
   };
 
   // Auto-boot on DOM ready

@@ -1111,6 +1111,177 @@ YÊU CẦU: Trả về DUY NHẤT một chuỗi JSON hợp lệ (không kèm mar
     }
   }
 
+  // --------------------------------------------------------------------------
+  // 8. CREATIVE FATIGUE RADAR & AUTO-REFRESH ENGINE (Madgicx style)
+  // --------------------------------------------------------------------------
+  class CreativeFatigueEngine {
+    constructor(dataEngine, assistantEngine) {
+      this.dataEngine = dataEngine;
+      this.assistantEngine = assistantEngine;
+    }
+
+    async analyzeRadar() {
+      const creatives = await this.dataEngine.getAllCreatives();
+      const fresh = [];
+      const watch = [];
+      const fatigued = [];
+
+      creatives.forEach(cr => {
+        const item = {
+          ...cr,
+          isHighFatigue: cr.status === 'FATIGUE' || cr.frequency >= 2.4,
+          isWatch: cr.status === 'WATCH' || (cr.frequency >= 1.8 && cr.frequency < 2.4)
+        };
+
+        if (item.isHighFatigue) {
+          fatigued.push(item);
+        } else if (item.isWatch) {
+          watch.push(item);
+        } else {
+          fresh.push(item);
+        }
+      });
+
+      return {
+        total: creatives.length,
+        freshCount: fresh.length,
+        watchCount: watch.length,
+        fatigueCount: fatigued.length,
+        fresh,
+        watch,
+        fatigued,
+        primaryFatigued: fatigued[0] || watch[0] || null
+      };
+    }
+
+    async generateRefreshVariants(creative) {
+      const platform = creative.platform || 'meta';
+      const isTikTok = platform === 'tiktok';
+
+      // 1. If Gemini available, request Gemini for 3 creative pivot variations
+      if (this.assistantEngine && this.assistantEngine.getGeminiApiKey()) {
+        try {
+          const geminiVariants = await this.generateWithGemini(creative);
+          if (geminiVariants && geminiVariants.length > 0) return geminiVariants;
+        } catch (e) {
+          console.warn('Gemini refresh variants fallback:', e);
+        }
+      }
+
+      // 2. High-converting Local Refresh Templates
+      return [
+        {
+          id: 'var_hook',
+          type: 'HOOK_INTERRUPT',
+          title: 'Biến thể A: Cú sốc thị giác 3s đầu (Pattern Interrupt)',
+          badge: '⚡ Tỷ lệ xem tăng +45%',
+          headline: `Cảnh báo: Đừng vội mua nếu chưa xem hết 5 giây này!`,
+          visualAction: isTikTok 
+            ? `Cận cảnh thả rơi sản phẩm hoặc thử nghiệm nước trực tiếp trong 3s đầu, lồng âm thanh tiếng gõ giòn tan.`
+            : `Hình ảnh phân đôi 2 nửa màn hình: "Cách 90% mọi người đang dùng sai" vs "Cách khắc phục ngay".`,
+          audioHook: `"Nếu bạn vẫn đang dùng cách cũ thì dừng lại ngay 3 giây nhé, đây là bí mật tiết kiệm một nửa chi phí!"`,
+          strategy: 'Giữ nguyên tệp khách hàng và toàn bộ phần thân video, chỉ thay đổi cú giật tít 3s đầu để phá vỡ sự bão hòa thị giác.'
+        },
+        {
+          id: 'var_angle',
+          type: 'ANGLE_PIVOT',
+          title: 'Biến thể B: Đổi góc tiếp cận Nỗi đau (Angle Shift)',
+          badge: '🎯 Tiếp cận nhóm tệp mới',
+          headline: `Bí quyết giải quyết nỗi lo lớn nhất của người bận rộn`,
+          visualAction: isTikTok
+            ? `Diễn viên trong tình huống đời thường tại công sở hoặc gia đình, nói thẳng vào camera với phong cách tự nhiên (UGC).`
+            : `Ảnh Feedback tin nhắn chụp màn hình từ khách hàng thật thể hiện sự bất ngờ và hài lòng.`,
+          audioHook: `"Nhiều bạn hỏi mình làm sao giải quyết được vấn đề này mà không tốn kém, thì đây là câu trả lời nhé!"`,
+          strategy: 'Chuyển từ góc nhìn bán hàng trực diện sang góc chia sẻ kinh nghiệm hữu ích, khơi gợi nhu cầu từ tệp khách hàng đang lướt qua.'
+        },
+        {
+          id: 'var_offer',
+          type: 'OFFER_URGENCY',
+          title: 'Biến thể C: Kích thích với Ưu đãi Độc quyền (Offer Boost)',
+          badge: '🛒 Đẩy mạnh tỷ lệ chuyển đổi',
+          headline: `Duy nhất hôm nay: Tặng kèm quà độc quyền & Freeship`,
+          visualAction: isTikTok
+            ? `Tay cầm quà tặng bóc seal kèm nhãn 'Chỉ áp dụng trong video này', camera lia nhanh vào giỏ hàng.`
+            : `Banner hiển thị đếm ngược thời gian còn lại của chương trình Flash Sale kèm voucher 35%.`,
+          audioHook: `"Chỉ dành riêng cho những bạn xem được video này hôm nay: Quà tặng giới hạn cho 30 đơn đầu tiên!"`,
+          strategy: 'Đánh vào tâm lý sợ bỏ lỡ (FOMO) của những khách hàng đã xem quảng cáo 2-3 lần nhưng chưa quyết định chốt đơn.'
+        }
+      ];
+    }
+
+    async generateWithGemini(creative) {
+      const apiKey = this.assistantEngine.getGeminiApiKey();
+      if (!apiKey) return null;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+      const prompt = `Bạn là Giám đốc Sáng tạo (Creative Director) & Chuyên gia chống chai mỏi quảng cáo (Creative Fatigue) cho Meta & TikTok Ads.
+Quảng cáo sau đây đang bị bão hòa tần suất (Frequency ${creative.frequency}, khách xem quá nhiều lần gây chán):
+- Tên nội dung: ${creative.name}
+- Headline cũ: ${creative.headline}
+- Nền tảng: ${creative.platform}
+- Hook Rate hiện tại: ${creative.hookRate}%
+
+Nhiệm vụ: Sáng tạo chính xác 3 biến thể nội dung thay thế (Replacement Variations) để "hồi sinh" quảng cáo này mà không cần tắt chiến dịch:
+1. Biến thể A: Cú sốc thị giác 3s đầu (Pattern Interrupt)
+2. Biến thể B: Đổi góc tiếp cận sang nỗi đau khác (Angle Shift)
+3. Biến thể C: Kích thích FOMO và Ưu đãi (Offer Urgency)
+
+YÊU CẦU: Trả về DUY NHẤT một chuỗi JSON hợp lệ (không kèm markdown code fence):
+[
+  {
+    "id": "var_1",
+    "type": "HOOK_INTERRUPT",
+    "title": "Biến thể A: Cú sốc thị giác 3s đầu",
+    "badge": "⚡ Tăng +40% giữ chân",
+    "headline": "Tiêu đề mới thu hút",
+    "visualAction": "Mô tả hình ảnh hoặc hành động 3s đầu",
+    "audioHook": "Lời thoại mở đầu 3s",
+    "strategy": "Giải thích ngắn gọn chiến lược làm mới"
+  },
+  {
+    "id": "var_2",
+    "type": "ANGLE_PIVOT",
+    "title": "Biến thể B: Đổi góc tiếp cận",
+    "badge": "🎯 Tiếp cận nhóm tệp mới",
+    "headline": "...",
+    "visualAction": "...",
+    "audioHook": "...",
+    "strategy": "..."
+  },
+  {
+    "id": "var_3",
+    "type": "OFFER_URGENCY",
+    "title": "Biến thể C: Kích thích ưu đãi",
+    "badge": "🛒 Đẩy mạnh chuyển đổi",
+    "headline": "...",
+    "visualAction": "...",
+    "audioHook": "...",
+    "strategy": "..."
+  }
+]`;
+
+      const payload = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) return null;
+
+      text = text.trim().replace(/^```json/i, '').replace(/```$/i, '').trim();
+      return JSON.parse(text);
+    }
+  }
+
   window.AdsAI = window.AdsAI || {};
   window.AdsAI.AIAssistantEngine = AIAssistantEngine;
   window.AdsAI.AICommandParser = AICommandParser;
@@ -1119,5 +1290,6 @@ YÊU CẦU: Trả về DUY NHẤT một chuỗi JSON hợp lệ (không kèm mar
   window.AdsAI.AutopilotManager = AutopilotManager;
   window.AdsAI.CreativeStudioEngine = CreativeStudioEngine;
   window.AdsAI.AIRulesEngine = AIRulesEngine;
+  window.AdsAI.CreativeFatigueEngine = CreativeFatigueEngine;
 
 })(window);

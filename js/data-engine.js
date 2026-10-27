@@ -809,6 +809,43 @@
       return await this.mockProvider.getCreatives();
     }
 
+    async updateCreativeDynamic(creativeId, newVariant) {
+      const creatives = await this.mockProvider.getCreatives();
+      const cr = creatives.find(c => c.id === creativeId);
+      if (!cr) return false;
+
+      const beforeState = {
+        id: cr.id,
+        name: cr.name,
+        headline: cr.headline,
+        status: cr.status,
+        frequency: cr.frequency
+      };
+
+      cr.name = newVariant.name || cr.name;
+      cr.headline = newVariant.headline || cr.headline;
+      cr.status = 'WINNER';
+      cr.frequency = 1.1;
+      cr.hookRate = newVariant.hookRate || Math.max(cr.hookRate || 60, 75.0);
+
+      this.logAction({
+        actionType: 'REFRESH_CREATIVE',
+        title: `Làm mới biến thể Creative: ${cr.name}`,
+        description: `Đã áp dụng Hook & Tiêu đề mới: "${cr.headline}". Tần suất được làm mới về 1.1 lần/người để hồi sinh chuyển đổi.`,
+        beforeState,
+        afterState: {
+          id: cr.id,
+          name: cr.name,
+          headline: cr.headline,
+          status: 'WINNER',
+          frequency: 1.1
+        },
+        userApproved: true
+      });
+
+      return true;
+    }
+
     /**
      * Filter daily metrics according to activeFilters
      */
@@ -1476,6 +1513,15 @@
         prov.data.adSets = prov.data.adSets.filter(s => s.campaignId !== cmpId);
         prov.data.ads = prov.data.ads.filter(a => a.campaignId !== cmpId);
         prov.data.dailyMetrics = prov.data.dailyMetrics.filter(m => m.campaignId !== cmpId);
+      } else if (entry.actionType === 'REFRESH_CREATIVE') {
+        const { id, name, headline, status, frequency } = entry.beforeState;
+        const cr = prov.data.creatives.find(c => c.id === id);
+        if (cr) {
+          cr.name = name;
+          cr.headline = headline;
+          cr.status = status;
+          cr.frequency = frequency;
+        }
       }
 
       entry.status = 'REVERTED';

@@ -1277,14 +1277,66 @@
         <!-- =================================================================== -->
         <!-- SUB-TAB 2: CREATIVES LIBRARY & FATIGUE MONITOR -->
         <!-- =================================================================== -->
+        <!-- =================================================================== -->
+        <!-- SUB-TAB 2: CREATIVES LIBRARY & FATIGUE RADAR -->
+        <!-- =================================================================== -->
         <div id="creativeLibraryView" class="hidden space-y-6">
+          
+          <!-- FATIGUE RADAR DASHBOARD CARD -->
+          <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-3xl shadow-lg space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-400/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+                    MADGICX FATIGUE RADAR 24/7
+                  </span>
+                  <span class="text-xs text-slate-400">Giám sát sức khỏe nội dung & bão hòa tần suất</span>
+                </div>
+                <h3 class="text-lg font-black tracking-tight">Radar Nhận Diện & Hồi Sinh Quảng Cáo Chai Mỏi</h3>
+                <p class="text-xs text-slate-300 max-w-xl">Hệ thống đo lường số lần hiển thị lặp lại trên mỗi khách hàng (Frequency) và cảnh báo khi người xem bắt đầu "chán ngấy" nội dung.</p>
+              </div>
+
+              <!-- Stat Counters -->
+              <div class="flex items-center gap-2 shrink-0">
+                <div class="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/15 text-center">
+                  <span class="text-[9px] font-bold uppercase text-slate-300 block">Tươi Mới</span>
+                  <strong id="radarFreshCount" class="text-base font-black text-emerald-400">0</strong>
+                </div>
+                <div class="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/15 text-center">
+                  <span class="text-[9px] font-bold uppercase text-slate-300 block">Cần Chú Ý</span>
+                  <strong id="radarWatchCount" class="text-base font-black text-amber-400">0</strong>
+                </div>
+                <div class="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/15 text-center">
+                  <span class="text-[9px] font-bold uppercase text-slate-300 block">Bão Hòa</span>
+                  <strong id="radarFatigueCount" class="text-base font-black text-rose-400">0</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- FATIGUE ALERT CALLOUT BOX -->
+            <div id="radarFatigueAlertBox" class="hidden p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-start gap-3">
+                <span class="text-xl shrink-0">🚨</span>
+                <div>
+                  <strong class="font-bold text-rose-300 block" id="radarFatigueAlertTitle">BÁO ĐỘNG: Quảng cáo đang bị chai tệp nặng</strong>
+                  <p class="text-rose-100 text-[11px] mt-0.5 leading-relaxed" id="radarFatigueAlertDesc">Khách hàng đã xem quảng cáo này trung bình hơn 2.5 lần. Tỷ lệ click (CTR) giảm mạnh và chi phí đơn hàng (CPA) đang tăng vọt.</p>
+                </div>
+              </div>
+              <button id="radarFatigueActionBtn" onclick="window.openCreativeRefreshModal()" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-md transition shrink-0 flex items-center gap-1.5 animate-pulse">
+                <span>🔄 Làm Mới Biến Thể Bài Này</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section Header & Filters -->
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-base font-bold text-slate-900">Kho Tư liệu Đang Chạy Thực Tế</h3>
-              <p class="text-xs text-slate-500">Phân loại tự động theo hiệu suất và cảnh báo bài bị bão hòa tần suất.</p>
+              <h3 class="text-base font-bold text-slate-900">Danh Mục Tư Liệu & Trạng Thái Chi Tiết</h3>
+              <p class="text-xs text-slate-500">Bấm "Làm mới biến thể" trên bất kỳ bài nào để AI sinh 3 góc quay/hook thay thế.</p>
             </div>
             <div class="flex gap-2 text-xs">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold">● WINNER: ROAS cao</span>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold">● WINNER: Đang lãi</span>
               <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 font-bold animate-pulse">● FATIGUE: Bão hòa</span>
             </div>
           </div>
@@ -2505,6 +2557,55 @@
         <button onclick="document.getElementById('jargonModal').classList.add('hidden')" class="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl transition">
           Đã hiểu
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: AI CREATIVE AUTO-REFRESH REPLACER (MADGICX INTELLIGENCE) -->
+  <!-- ========================================================================= -->
+  <div id="creativeRefreshModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-500 to-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-md">
+            🔄
+          </div>
+          <div>
+            <h3 class="font-black text-sm sm:text-base text-slate-900">AI Creative Auto-Refresh Replacer</h3>
+            <p class="text-[11px] text-slate-400">Hồi sinh quảng cáo chai tệp bằng cách hoán đổi 3s Hook mà không tắt chiến dịch</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('creativeRefreshModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <!-- Current Fatigued Creative Info Banner -->
+      <div id="refreshModalCurrentCreative" class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-4">
+        <img id="refreshModalThumb" src="" alt="Thumbnail" class="w-16 h-16 rounded-xl object-cover border border-slate-300 shrink-0" />
+        <div class="space-y-1 flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span id="refreshModalPlatform" class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">META</span>
+            <strong id="refreshModalName" class="text-xs text-slate-900 truncate block">...</strong>
+          </div>
+          <p id="refreshModalHeadline" class="text-[11px] text-slate-500 italic truncate">"..."</p>
+          <div class="flex items-center gap-3 text-[10px] text-slate-500 pt-0.5">
+            <span>Tần suất cũ: <strong id="refreshModalFreq" class="text-rose-600 font-bold">2.8</strong></span>
+            <span>• Hook Rate: <strong id="refreshModalHook" class="text-slate-700 font-bold">42%</strong></span>
+            <span>• Tình trạng: <span class="text-rose-600 font-bold">Bão hòa nặng</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Replacement Variations Area -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-700">3 Biến Thể Thay Thế Khuyên Dùng (AI Generated):</span>
+          <span class="text-[10px] text-indigo-600 font-semibold">Giữ nguyên tệp pixel & dữ liệu học</span>
+        </div>
+
+        <div id="refreshVariantsList" class="space-y-3">
+          <!-- Dynamically populated with 3 smart variations -->
+        </div>
       </div>
     </div>
   </div>
