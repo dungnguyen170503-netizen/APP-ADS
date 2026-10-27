@@ -383,7 +383,7 @@ Tuyệt đối không bịa số liệu không có trong context.`;
         intent = 'SCALE_WINNERS';
       } else if (lower.includes('tạm dừng') || lower.includes('tắt') || lower.includes('đang lỗ') || lower.includes('chưa có đơn') || lower.includes('cắn tiền')) {
         intent = 'STOP_LOSING';
-      } else if (lower.includes('ý tưởng') || lower.includes('video tiktok') || lower.includes('creative') || lower.includes('concept')) {
+      } else if (lower.includes('ý tưởng') || lower.includes('video tiktok') || lower.includes('creative') || lower.includes('concept') || lower.includes('kịch bản') || lower.includes('hook') || lower.includes('content') || lower.includes('viết bài') || lower.includes('mẫu quảng cáo')) {
         intent = 'GENERATE_CREATIVES';
       } else if (lower.includes('tại sao') || lower.includes('giảm hiệu quả') || lower.includes('phân tích')) {
         intent = 'ANALYZE_WHY';
@@ -540,11 +540,193 @@ Tuyệt đối không bịa số liệu không có trong context.`;
     }
   }
 
+  // --------------------------------------------------------------------------
+  // 6. AI CREATIVE STUDIO & HOOK RATER ENGINE (AdCreative.ai / Madgicx style)
+  // --------------------------------------------------------------------------
+  class CreativeStudioEngine {
+    constructor(assistantEngine) {
+      this.assistantEngine = assistantEngine;
+    }
+
+    async generateScripts({ product, category, targetAudience, usp, platform = 'tiktok' }) {
+      const prod = product || 'Giày thể thao ProMax';
+      const cat = category || 'Thời trang';
+      const aud = targetAudience || 'Nam nữ 18-35 tuổi, năng động, thích thể thao hoặc nhân viên văn phòng';
+      const benefit = usp || 'Thiết kế êm chân, chống trượt, bảo hành 1 năm, freeship toàn quốc';
+
+      // 1. If Gemini API key is configured, use Gemini 1.5 Flash
+      if (this.assistantEngine && this.assistantEngine.getGeminiApiKey()) {
+        try {
+          const geminiResult = await this.generateWithGemini({ product: prod, category: cat, targetAudience: aud, usp: benefit, platform });
+          if (geminiResult && geminiResult.scripts && geminiResult.scripts.length > 0) {
+            return geminiResult;
+          }
+        } catch (err) {
+          console.warn('Gemini Creative Studio failed, falling back to local Engine:', err);
+        }
+      }
+
+      // 2. High-converting Local Rule-Based Creative Studio
+      return this.generateOfflineScripts({ product: prod, category: cat, targetAudience: aud, usp: benefit, platform });
+    }
+
+    async generateWithGemini({ product, category, targetAudience, usp, platform }) {
+      const apiKey = this.assistantEngine.getGeminiApiKey();
+      if (!apiKey) return null;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+      const prompt = `Bạn là Giám đốc Sáng tạo (Creative Director) & Chuyên gia Video ngắn (TikTok / Meta Reels) hàng đầu Việt Nam.
+Nhiệm vụ: Sáng tạo chính xác 3 kịch bản quảng cáo chuyển đổi cao và chấm điểm Hook 3 giây đầu (Hook Score từ 75 đến 98 điểm) cho sản phẩm sau:
+- Tên sản phẩm: ${product}
+- Ngành hàng: ${category}
+- Đối tượng mục tiêu: ${targetAudience}
+- Điểm bán hàng độc nhất (USP)/Ưu đãi: ${usp}
+- Nền tảng: ${platform === 'tiktok' ? 'TikTok Ads / Reels (Video dọc 9:16, 15-30 giây)' : 'Meta Ads (Facebook/Instagram Post Feed)'}
+
+YÊU CẦU: Trả về DUY NHẤT một chuỗi JSON hợp lệ (KHÔNG kèm markdown code fence, chỉ có JSON thô) theo cấu trúc:
+{
+  "averageHookScore": 93,
+  "summaryAdvice": "Tóm tắt 1-2 câu chiến lược thu hút người xem cho sản phẩm này.",
+  "scripts": [
+    {
+      "id": "script_1",
+      "angle": "Góc nhìn Nỗi đau & Đồng cảm (Pain-Point Hook)",
+      "hookScore": 95,
+      "hookGrade": "Xuất sắc",
+      "hookText": "Câu nói hoặc chữ giật tít 3 giây đầu",
+      "visualAction": "Mô tả hình ảnh hoặc hành động của diễn viên/sản phẩm trong 3 giây đầu",
+      "audioVoiceover": "Lời thoại lồng tiếng hoặc âm thanh",
+      "bodyContent": "Diễn biến thân bài (giải quyết vấn đề và đưa USP sản phẩm)",
+      "cta": "Câu kêu gọi hành động (Call To Action)",
+      "psychologicalTrigger": "Giải thích ngắn gọn lý do vì sao Hook này giữ chân người xem"
+    },
+    {
+      "id": "script_2",
+      "angle": "Góc nhìn Tò mò & Phản trực giác (Pattern Interrupt)",
+      "hookScore": 91,
+      "hookGrade": "Rất cao",
+      "hookText": "...",
+      "visualAction": "...",
+      "audioVoiceover": "...",
+      "bodyContent": "...",
+      "cta": "...",
+      "psychologicalTrigger": "..."
+    },
+    {
+      "id": "script_3",
+      "angle": "Góc nhìn Trải nghiệm thực tế & Review (Social Proof)",
+      "hookScore": 88,
+      "hookGrade": "Tốt",
+      "hookText": "...",
+      "visualAction": "...",
+      "audioVoiceover": "...",
+      "bodyContent": "...",
+      "cta": "...",
+      "psychologicalTrigger": "..."
+    }
+  ]
+}`;
+
+      const payload = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048
+        }
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('Empty response from Gemini');
+
+      text = text.trim().replace(/^```json/i, '').replace(/```$/i, '').trim();
+      const parsed = JSON.parse(text);
+      parsed.isGemini = true;
+      parsed.platform = platform;
+      parsed.product = product;
+      return parsed;
+    }
+
+    generateOfflineScripts({ product, category, targetAudience, usp, platform }) {
+      const isTikTok = platform === 'tiktok';
+
+      return {
+        product,
+        category,
+        platform,
+        isGemini: false,
+        averageHookScore: 92,
+        summaryAdvice: `Chiến lược cho "${product}": Khai thác mạnh 3 giây đầu bằng cú sốc thị giác và giải quyết nỗi đau phổ biến của ${targetAudience}.`,
+        scripts: [
+          {
+            id: 'script_1',
+            angle: 'Góc nhìn Nỗi đau & Đồng cảm (Pain-Point Hook)',
+            hookScore: 95,
+            hookGrade: 'Xuất sắc',
+            hookText: `Đừng vội mua ${product} nếu bạn chưa biết sự thật này...`,
+            visualAction: isTikTok
+              ? `Diễn viên nhăn mặt thể hiện sự bực bội với sản phẩm cũ thông thường, sau đó ném sang một bên và cầm ${product} lên với biểu cảm bất ngờ.`
+              : `Hình ảnh phân đôi Before/After: Một bên khó chịu bực bội vì sản phẩm cũ, một bên thư thái hài lòng khi trải nghiệm ${product}.`,
+            audioVoiceover: `"Bạn có bao giờ cảm thấy cực kỳ khó chịu khi bỏ cả đống tiền ra nhưng nhận lại trải nghiệm kém chất lượng không? Vấn đề không phải do bạn chọn sai, mà do chưa biết đến giải pháp này!"`,
+            bodyContent: `Tập trung giới thiệu điểm khác biệt: "${product} sinh ra để giải quyết triệt để vấn đề đó với ${usp}. Đã có hơn 12.000 khách hàng kiểm chứng chất lượng."`,
+            cta: isTikTok
+              ? `Chạm tay ngay vào giỏ hàng màu vàng góc trái màn hình để nhận ưu đãi giảm giá độc quyền hôm nay!`
+              : `Bấm nút 'Gửi tin nhắn' hoặc click link bên dưới nhận mã giảm 30% kèm quà tặng ngay hôm nay!`,
+            psychologicalTrigger: 'Kích hoạt nỗi sợ mất tiền và sự đồng cảm ngay từ câu mở đầu, khiến người xem dừng lướt trong 3 giây đầu.'
+          },
+          {
+            id: 'script_2',
+            angle: 'Góc nhìn Tò mò & Phản trực giác (Pattern Interrupt)',
+            hookScore: 91,
+            hookGrade: 'Rất cao',
+            hookText: `Tại sao ${product} lại bị các đối thủ trong ngành ghét đến vậy?`,
+            visualAction: isTikTok
+              ? `Một bài test thử thách thực tế khắc nghiệt (thử độ bền, test nước, hoặc test tác dụng tức thì) trực tiếp trong 3 giây đầu khiến người xem không thể rời mắt.`
+              : `Infographic so sánh bảng giá và tính năng giữa ${product} và các sản phẩm đắt tiền gấp 3 lần trên thị trường.`,
+            audioVoiceover: `"Lý do là vì với mức giá cực kỳ phải chăng, ${product} lại mang đến công nghệ và trải nghiệm ngang ngửa các dòng cao cấp đắt đỏ gấp 3 lần!"`,
+            bodyContent: `Minh họa chi tiết các điểm vượt trội: "${usp}. Không qua trung gian nên bạn tiết kiệm được tối đa chi phí mà vẫn hưởng chất lượng xịn nhất."`,
+            cta: isTikTok
+              ? `Số lượng flash sale chỉ còn đúng 20 suất cuối cùng, nhấp vào góc trái đặt ngay kẻo lỡ!`
+              : `Chỉ áp dụng cho 50 bạn đầu tiên để lại bình luận hoặc click vào liên kết bên dưới!`,
+            psychologicalTrigger: 'Đánh vào tâm lý tò mò và thuyết âm mưu, tạo hiệu ứng phản trực giác (Pattern Interrupt) khiến não bộ phải chú ý.'
+          },
+          {
+            id: 'script_3',
+            angle: 'Góc nhìn Trải nghiệm thực tế & Review (Social Proof Hook)',
+            hookScore: 89,
+            hookGrade: 'Tốt',
+            hookText: `Tôi đã liều đặt mua thử ${product} đang hot rần rần và cái kết bất ngờ...`,
+            visualAction: isTikTok
+              ? `Quay cận cảnh unboxing bóc hộp chân thực, âm thanh ASMR giòn tan, zoom cận cảnh chi tiết chất liệu và độ hoàn thiện tinh xảo.`
+              : `Video/Hình ảnh khách hàng thật chụp feedback 5 sao kèm hình ảnh thực tế sản phẩm trên tay.`,
+            audioVoiceover: `"Thấy mọi người review khen nức nở ban đầu mình cũng nửa tin nửa ngờ. Nhưng sau 1 tuần dùng thử thực tế thì phải thốt lên: Quá đáng đồng tiền bát gạo!"`,
+            bodyContent: `Liệt kê cảm nhận thực tế: "Cảm giác dùng cực kỳ thích, đúng như cam kết: ${usp}. Đội ngũ hỗ trợ nhiệt tình, đổi trả 1-1 nếu không ưng ý."`,
+            cta: isTikTok
+              ? `Ai cần sản phẩm chuẩn chính hãng thì bấm ngay vào giỏ hàng bên dưới góc trái nhé!`
+              : `Xem thêm hàng trăm đánh giá 5 sao và đặt hàng chính hãng tại đường link bên dưới!`,
+            psychologicalTrigger: 'Sử dụng tâm lý Social Proof (bằng chứng xã hội) và góc nhìn người dùng độc lập để phá vỡ sự hoài nghi của khách hàng.'
+          }
+        ]
+      };
+    }
+  }
+
   window.AdsAI = window.AdsAI || {};
   window.AdsAI.AIAssistantEngine = AIAssistantEngine;
   window.AdsAI.AICommandParser = AICommandParser;
   window.AdsAI.ClarificationStateMachine = ClarificationStateMachine;
   window.AdsAI.PlanGenerator = PlanGenerator;
   window.AdsAI.AutopilotManager = AutopilotManager;
+  window.AdsAI.CreativeStudioEngine = CreativeStudioEngine;
 
 })(window);

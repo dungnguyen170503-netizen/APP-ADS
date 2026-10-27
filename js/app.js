@@ -309,6 +309,9 @@
       this.uiMode = this.stateStore.get('uiMode', 'simple');
       this.autopilotManager = new window.AdsAI.AutopilotManager(this.dataEngine);
       this.clarificationMachine = new window.AdsAI.ClarificationStateMachine();
+      this.creativeStudioEngine = new window.AdsAI.CreativeStudioEngine(this.aiEngine);
+      this.activeCreativeTab = 'studio';
+      this.currentGeneratedScripts = null;
       this.currentPlan = null;
       this.isVoiceListening = false;
 
@@ -957,52 +960,224 @@
     }
 
     // ------------------------------------------------------------------------
-    // SCREEN 08: CREATIVES LIBRARY
+    // SCREEN 08: CREATIVES LIBRARY & AI HOOK STUDIO
     // ------------------------------------------------------------------------
     async renderCreatives() {
+      // 1. Render Library Grid
       const creatives = await this.dataEngine.getAllCreatives();
       const grid = document.getElementById('creativesGridContainer');
-      if (!grid) return;
+      if (grid) {
+        grid.innerHTML = creatives.map(cr => {
+          let badgeColor = 'bg-slate-100 text-slate-700';
+          if (cr.status === 'WINNER') badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+          else if (cr.status === 'FATIGUE') badgeColor = 'bg-rose-100 text-rose-800 border-rose-200 animate-pulse';
+          else if (cr.status === 'WATCH') badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
 
-      grid.innerHTML = creatives.map(cr => {
-        let badgeColor = 'bg-slate-100 text-slate-700';
-        if (cr.status === 'WINNER') badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-        else if (cr.status === 'FATIGUE') badgeColor = 'bg-rose-100 text-rose-800 border-rose-200 animate-pulse';
-        else if (cr.status === 'WATCH') badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
+          return `
+            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer" onclick="window.app.openCreativeDetail('${cr.id}')">
+              <div>
+                <div class="relative h-44 bg-slate-900 overflow-hidden">
+                  <img src="${cr.url}" alt="${cr.name}" class="w-full h-full object-cover opacity-90 hover:scale-105 transition duration-300" />
+                  <div class="absolute top-3 left-3 flex gap-2">
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${cr.platform === 'meta' ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}">${cr.platform.toUpperCase()}</span>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${badgeColor}">${cr.status}</span>
+                  </div>
+                  <div class="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded text-[10px] font-mono">${cr.format}</div>
+                </div>
+                <div class="p-4 space-y-2">
+                  <h4 class="font-bold text-xs text-slate-900 line-clamp-2">${cr.name}</h4>
+                  <p class="text-[11px] text-slate-500 italic">"${cr.headline}"</p>
+                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
+                    <div>
+                      <span class="text-[10px] text-slate-400 block">Hook Rate (3s)</span>
+                      <strong class="font-bold text-slate-800">${cr.hookRate}%</strong>
+                    </div>
+                    <div>
+                      <span class="text-[10px] text-slate-400 block">Tần suất (Freq)</span>
+                      <strong class="font-bold ${cr.frequency >= 2.5 ? 'text-rose-600' : 'text-slate-800'}">${cr.frequency.toFixed(1)}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-slate-50 px-4 py-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold">
+                <span class="text-slate-600">ROAS: <strong class="text-indigo-600">${cr.roas}</strong></span>
+                <span class="text-indigo-600 hover:underline">Chi tiết →</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 2. If Studio Results area is empty, generate initial default scripts so it looks active immediately
+      const resultsArea = document.getElementById('studioResultsArea');
+      if (resultsArea && (!resultsArea.children.length || !this.currentGeneratedScripts)) {
+        await this.generateStudioScripts();
+      }
+    }
+
+    async generateStudioScripts(overrideProduct = null, overrideCategory = null) {
+      const prodInput = document.getElementById('studioInputProduct');
+      const catInput = document.getElementById('studioInputCategory');
+      const audInput = document.getElementById('studioInputAudience');
+      const uspInput = document.getElementById('studioInputUsp');
+      const platformRadio = document.querySelector('input[name="studioPlatformRadio"]:checked');
+
+      if (overrideProduct && prodInput) prodInput.value = overrideProduct;
+      if (overrideCategory && catInput) catInput.value = overrideCategory;
+
+      const product = prodInput ? prodInput.value.trim() : 'Giày thể thao ProMax siêu êm chân';
+      const category = catInput ? catInput.value : 'Thời trang & Phụ kiện';
+      const targetAudience = audInput ? audInput.value.trim() : 'Nam nữ 18-35 tuổi, dân văn phòng hoặc thích thể thao';
+      const usp = uspInput ? uspInput.value.trim() : 'Đệm khí giảm chấn 95%, bảo hành 12 tháng, giảm 35% duy nhất hôm nay';
+      const platform = platformRadio ? platformRadio.value : 'tiktok';
+
+      const resultsArea = document.getElementById('studioResultsArea');
+      const btn = document.getElementById('studioGenerateBtn');
+      const btnIcon = document.getElementById('studioGenerateBtnIcon');
+      const btnText = document.getElementById('studioGenerateBtnText');
+
+      if (btn) btn.disabled = true;
+      if (btnIcon) btnIcon.textContent = '⏳';
+      if (btnText) btnText.textContent = 'ĐANG PHÂN TÍCH & VIẾT KỊCH BẢN...';
+
+      if (resultsArea) {
+        resultsArea.innerHTML = `
+          <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center space-y-4 animate-pulse">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 mx-auto flex items-center justify-center text-xl font-bold">🪄</div>
+            <div>
+              <h4 class="font-bold text-slate-800 text-sm">AI đang bóc tách góc nhìn & chấm điểm Hook cho "${product}"</h4>
+              <p class="text-xs text-slate-500 max-w-md mx-auto mt-1">Đang áp dụng công thức 3 giây đầu giữ chân người xem và cấu trúc chuyển đổi cao...</p>
+            </div>
+          </div>
+        `;
+      }
+
+      try {
+        const data = await this.creativeStudioEngine.generateScripts({
+          product,
+          category,
+          targetAudience,
+          usp,
+          platform
+        });
+
+        this.currentGeneratedScripts = data;
+        this.renderStudioResults(data);
+      } catch (err) {
+        console.error('Error generating scripts:', err);
+        if (resultsArea) {
+          resultsArea.innerHTML = `
+            <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs">
+              ⚠️ Không thể tạo kịch bản lúc này: ${err.message}. Vui lòng thử lại.
+            </div>
+          `;
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+        if (btnIcon) btnIcon.textContent = '🪄';
+        if (btnText) btnText.textContent = 'SINH 3 KỊCH BẢN & ĐÁNH GIÁ HOOK NGAY';
+      }
+    }
+
+    renderStudioResults(data) {
+      const resultsArea = document.getElementById('studioResultsArea');
+      if (!resultsArea || !data || !data.scripts) return;
+
+      const isTikTok = data.platform === 'tiktok';
+
+      const scriptsHtml = data.scripts.map((sc, idx) => {
+        let scoreBg = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+        if (sc.hookScore < 85) scoreBg = 'bg-amber-100 text-amber-800 border-amber-300';
 
         return `
-          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer" onclick="window.app.openCreativeDetail('${cr.id}')">
-            <div>
-              <div class="relative h-44 bg-slate-900 overflow-hidden">
-                <img src="${cr.url}" alt="${cr.name}" class="w-full h-full object-cover opacity-90 hover:scale-105 transition duration-300" />
-                <div class="absolute top-3 left-3 flex gap-2">
-                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${cr.platform === 'meta' ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}">${cr.platform.toUpperCase()}</span>
-                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${badgeColor}">${cr.status}</span>
+          <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
+            <div class="space-y-3">
+              <!-- Card Header -->
+              <div class="flex items-start justify-between gap-2 pb-3 border-b border-slate-100">
+                <div>
+                  <span class="text-[10px] font-black uppercase tracking-wider text-indigo-600">Kịch bản #${idx + 1}</span>
+                  <h4 class="font-black text-sm text-slate-900">${sc.angle}</h4>
                 </div>
-                <div class="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded text-[10px] font-mono">${cr.format}</div>
+                <div class="text-right shrink-0">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black border ${scoreBg}">
+                    <span>🎯 Hook:</span>
+                    <span>${sc.hookScore}/100</span>
+                  </span>
+                  <span class="block text-[9px] text-slate-400 font-bold uppercase mt-0.5">${sc.hookGrade || 'Rất tốt'}</span>
+                </div>
               </div>
-              <div class="p-4 space-y-2">
-                <h4 class="font-bold text-xs text-slate-900 line-clamp-2">${cr.name}</h4>
-                <p class="text-[11px] text-slate-500 italic">"${cr.headline}"</p>
-                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
-                  <div>
-                    <span class="text-[10px] text-slate-400 block">Hook Rate (3s)</span>
-                    <strong class="font-bold text-slate-800">${cr.hookRate}%</strong>
-                  </div>
-                  <div>
-                    <span class="text-[10px] text-slate-400 block">Tần suất (Freq)</span>
-                    <strong class="font-bold ${cr.frequency >= 2.5 ? 'text-rose-600' : 'text-slate-800'}">${cr.frequency.toFixed(1)}</strong>
-                  </div>
+
+              <!-- 0-3s Hook Box -->
+              <div class="bg-indigo-50/60 p-3.5 rounded-2xl border border-indigo-100 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-extrabold uppercase text-indigo-900 tracking-wider">🎣 0-3 GIÂY ĐẦU (HOOK)</span>
+                  <span class="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full shadow-xs">Giây quyết định</span>
+                </div>
+                <div class="text-xs font-black text-indigo-950 italic">
+                  "${sc.hookText}"
+                </div>
+                <div class="text-[11px] text-slate-600 space-y-1 pt-1 border-t border-indigo-100/70">
+                  <p><strong class="text-slate-800">🎬 Hình ảnh / Hành động:</strong> ${sc.visualAction}</p>
+                  <p><strong class="text-slate-800">🎙️ Lời thoại:</strong> ${sc.audioVoiceover}</p>
+                </div>
+              </div>
+
+              <!-- Body / USP -->
+              <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
+                <span class="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">💡 THÂN BÀI (${isTikTok ? '4-15 GIÂY' : 'NỘI DUNG CHÍNH'})</span>
+                <p class="text-xs text-slate-700 leading-relaxed">${sc.bodyContent}</p>
+              </div>
+
+              <!-- CTA -->
+              <div class="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-100 space-y-1">
+                <span class="text-[10px] font-extrabold uppercase text-emerald-800 tracking-wider">🛒 KÊU GỌI HÀNH ĐỘNG (CTA)</span>
+                <p class="text-xs font-semibold text-emerald-950">${sc.cta}</p>
+              </div>
+
+              <!-- Psychological Rationale -->
+              <div class="p-2.5 rounded-xl bg-purple-50/50 border border-purple-100 text-[11px] text-purple-900 flex items-start gap-1.5">
+                <span class="text-xs">🧠</span>
+                <div>
+                  <strong class="font-bold">Lý do giữ chân:</strong> ${sc.psychologicalTrigger || 'Tập trung kích thích cảm xúc tức thì.'}
                 </div>
               </div>
             </div>
-            <div class="bg-slate-50 px-4 py-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold">
-              <span class="text-slate-600">ROAS: <strong class="text-indigo-600">${cr.roas}</strong></span>
-              <span class="text-indigo-600 hover:underline">Chi tiết →</span>
+
+            <!-- Footer Actions -->
+            <div class="pt-3 border-t border-slate-100 flex items-center gap-2">
+              <button id="copyBtn_${idx}" onclick="window.copyScriptToClipboard(${idx})" class="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                <span>📋 Sao chép</span>
+              </button>
+              <button onclick="window.applyScriptToCampaign(${idx})" title="Đưa kịch bản này vào tạo chiến dịch mới" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-xs flex items-center justify-center gap-1.5">
+                <span>🚀 Dùng chạy Ads</span>
+              </button>
             </div>
           </div>
         `;
       }).join('');
+
+      resultsArea.innerHTML = `
+        <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-5 rounded-3xl shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] bg-white/20 text-purple-200 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                ${data.isGemini ? '✨ Gemini 1.5 Flash' : '⚡ Smart Creative OS'}
+              </span>
+              <span class="text-xs text-purple-200">Đã tạo cho: <strong>${data.product}</strong> (${isTikTok ? 'TikTok Ads' : 'Meta Ads'})</span>
+            </div>
+            <p class="text-xs text-purple-100 max-w-2xl">${data.summaryAdvice}</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 text-center shrink-0">
+            <span class="text-[10px] font-bold text-purple-200 uppercase tracking-wider block">Hook Score trung bình</span>
+            <div class="text-2xl font-black text-emerald-400">${data.averageHookScore}/100</div>
+            <span class="text-[9px] text-emerald-200 font-bold">Tỷ lệ xem tiếp > 40%</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          ${scriptsHtml}
+        </div>
+      `;
     }
 
     // ------------------------------------------------------------------------
@@ -1530,7 +1705,7 @@
 
     // Handle Intent: GENERATE_CREATIVES
     if (parsed.intent === 'GENERATE_CREATIVES') {
-      window.app.navigateTo('screen-creatives');
+      window.quickOpenCreativeStudio(parsed.slots.product || 'Giày thể thao ProMax siêu êm chân', null);
       return;
     }
 
@@ -1864,6 +2039,162 @@
   window.openJargonModal = function(term) {
     const modal = document.getElementById('jargonModal');
     if (modal) modal.classList.remove('hidden');
+  };
+
+  // 14. AI Creative & Hook Studio Global Handlers
+  window.switchCreativeTab = function(tabName) {
+    const studioView = document.getElementById('creativeStudioView');
+    const libraryView = document.getElementById('creativeLibraryView');
+    const studioBtn = document.getElementById('tabBtnCreativeStudio');
+    const libraryBtn = document.getElementById('tabBtnCreativeLibrary');
+
+    if (tabName === 'studio') {
+      if (studioView) studioView.classList.remove('hidden');
+      if (libraryView) libraryView.classList.add('hidden');
+      if (studioBtn) {
+        studioBtn.className = "px-4 py-2 rounded-xl bg-white text-indigo-700 shadow-xs transition flex items-center gap-1.5 font-bold";
+      }
+      if (libraryBtn) {
+        libraryBtn.className = "px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 font-bold";
+      }
+    } else {
+      if (studioView) studioView.classList.add('hidden');
+      if (libraryView) libraryView.classList.remove('hidden');
+      if (studioBtn) {
+        studioBtn.className = "px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 font-bold";
+      }
+      if (libraryBtn) {
+        libraryBtn.className = "px-4 py-2 rounded-xl bg-white text-indigo-700 shadow-xs transition flex items-center gap-1.5 font-bold";
+      }
+      window.app.renderCreatives();
+    }
+  };
+
+  window.updateStudioPlatformUI = function() {
+    const platformRadio = document.querySelector('input[name="studioPlatformRadio"]:checked');
+    const isTikTok = platformRadio && platformRadio.value === 'tiktok';
+
+    const ttLabel = document.getElementById('platformLabelTikTok');
+    const metaLabel = document.getElementById('platformLabelMeta');
+
+    if (isTikTok) {
+      if (ttLabel) ttLabel.className = "relative flex items-center gap-3 p-3.5 rounded-2xl border-2 border-indigo-600 bg-indigo-50 cursor-pointer transition";
+      if (metaLabel) metaLabel.className = "relative flex items-center gap-3 p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer transition hover:border-slate-300";
+    } else {
+      if (ttLabel) ttLabel.className = "relative flex items-center gap-3 p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer transition hover:border-slate-300";
+      if (metaLabel) metaLabel.className = "relative flex items-center gap-3 p-3.5 rounded-2xl border-2 border-indigo-600 bg-indigo-50 cursor-pointer transition";
+    }
+  };
+
+  window.quickFillStudioPreset = function(presetKey) {
+    const prodInput = document.getElementById('studioInputProduct');
+    const catInput = document.getElementById('studioInputCategory');
+    const audInput = document.getElementById('studioInputAudience');
+    const uspInput = document.getElementById('studioInputUsp');
+
+    const presets = {
+      sneaker: {
+        product: 'Giày thể thao ProMax siêu êm chân',
+        category: 'Thời trang & Phụ kiện',
+        audience: 'Nam nữ 18-35 tuổi, dân văn phòng hoặc thích thể thao',
+        usp: 'Đệm khí giảm chấn 95%, bảo hành 12 tháng, giảm 35% duy nhất hôm nay'
+      },
+      lipstick: {
+        product: 'Son dưỡng có màu cấp ẩm khóa môi 12H',
+        category: 'Mỹ phẩm & Làm đẹp',
+        audience: 'Phái đẹp 18-40 tuổi, môi hay khô nứt, thích tự nhiên',
+        usp: 'Chiết xuất bơ hạt mỡ hữu cơ, dưỡng môi căng mọng không chì, mua 1 tặng 1'
+      },
+      tea: {
+        product: 'Trà thảo mộc thanh lọc cơ thể & nhẹ bụng',
+        category: 'F&B & Thực phẩm dinh dưỡng',
+        audience: 'Dân văn phòng ngồi nhiều bụng dưới to, người hay nóng trong',
+        usp: '100% thảo mộc tự nhiên, hiệu quả sau 7 ngày, đổi trả miễn phí'
+      },
+      polo: {
+        product: 'Áo thun Polo sợi cafe khử mùi chống nhăn',
+        category: 'Thời trang & Phụ kiện',
+        audience: 'Nam giới 22-45 tuổi, cần trang phục lịch sự, thoáng mát',
+        usp: 'Công nghệ vải cafe co giãn 4 chiều, giặt máy không bai dão, freeship'
+      }
+    };
+
+    const chosen = presets[presetKey];
+    if (!chosen) return;
+
+    if (prodInput) prodInput.value = chosen.product;
+    if (catInput) catInput.value = chosen.category;
+    if (audInput) audInput.value = chosen.audience;
+    if (uspInput) uspInput.value = chosen.usp;
+
+    window.app.generateStudioScripts();
+  };
+
+  window.triggerGenerateStudioScripts = function() {
+    window.app.generateStudioScripts();
+  };
+
+  window.copyScriptToClipboard = async function(scriptIdx) {
+    const data = window.app.currentGeneratedScripts;
+    if (!data || !data.scripts || !data.scripts[scriptIdx]) return;
+    const sc = data.scripts[scriptIdx];
+
+    const copyText = `🎬 KỊCH BẢN QUẢNG CÁO: ${sc.angle} (Hook Score: ${sc.hookScore}/100)
+------------------------------------------------
+🎣 0-3 GIÂY ĐẦU (HOOK):
+- Tiêu đề: "${sc.hookText}"
+- Hình ảnh/Hành động: ${sc.visualAction}
+- Lời thoại: ${sc.audioVoiceover}
+
+💡 THÂN BÀI:
+${sc.bodyContent}
+
+🛒 KÊU GỌI HÀNH ĐỘNG (CTA):
+${sc.cta}
+
+🧠 TẠI SAO HOOK NÀY HIỆU QUẢ:
+${sc.psychologicalTrigger || 'Tập trung kích thích cảm xúc và giữ chân người xem.'}
+------------------------------------------------
+(Tạo bởi NTDAds AI Marketing Agent)`;
+
+    try {
+      await navigator.clipboard.writeText(copyText);
+      const btn = document.getElementById(`copyBtn_${scriptIdx}`);
+      if (btn) {
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="text-emerald-600 font-black">✅ Đã sao chép!</span>`;
+        setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
+      } else {
+        alert('✅ Đã sao chép kịch bản vào bộ nhớ tạm!');
+      }
+    } catch (e) {
+      alert(`Đã sao chép kịch bản:\n\n${copyText}`);
+    }
+  };
+
+  window.applyScriptToCampaign = function(scriptIdx) {
+    const data = window.app.currentGeneratedScripts;
+    if (!data || !data.scripts || !data.scripts[scriptIdx]) return;
+    const sc = data.scripts[scriptIdx];
+
+    const cmdText = `Tạo chiến dịch bán ${data.product} với góc nhìn ${sc.angle}, ngân sách 10 triệu trong 30 ngày trên ${data.platform === 'tiktok' ? 'TikTok' : 'Meta'}`;
+    
+    window.app.navigateTo('screen-command-center');
+    window.fillAndSubmitCmd(cmdText);
+  };
+
+  window.quickOpenCreativeStudio = function(product, category) {
+    window.app.navigateTo('screen-creatives');
+    window.switchCreativeTab('studio');
+    if (product) {
+      const prodInput = document.getElementById('studioInputProduct');
+      if (prodInput) prodInput.value = product;
+    }
+    if (category) {
+      const catInput = document.getElementById('studioInputCategory');
+      if (catInput) catInput.value = category;
+    }
+    window.app.generateStudioScripts();
   };
 
   // Auto-boot on DOM ready
