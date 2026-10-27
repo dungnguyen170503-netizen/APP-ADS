@@ -721,6 +721,396 @@ YÊU CẦU: Trả về DUY NHẤT một chuỗi JSON hợp lệ (KHÔNG kèm mar
     }
   }
 
+  // --------------------------------------------------------------------------
+  // 7. NO-CODE AI RULES ENGINE (Revealbot style with Natural Language in VN)
+  // --------------------------------------------------------------------------
+  class AIRulesEngine {
+    constructor(dataEngine, assistantEngine) {
+      this.dataEngine = dataEngine;
+      this.assistantEngine = assistantEngine;
+      this.storageKey = 'ntdads_automation_rules_v2';
+      this.rules = this.loadRules();
+    }
+
+    loadRules() {
+      const stored = localStorage.getItem(this.storageKey);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (e) {
+          console.warn('Failed to parse stored rules, resetting to defaults');
+        }
+      }
+
+      // Default safe preset rules
+      const defaults = [
+        {
+          id: 'rule_stop_burn',
+          name: 'Chống Đốt Tiền Mù Quáng',
+          badge: '🛡️ Bảo vệ ví tiền',
+          color: 'rose',
+          naturalText: 'Nếu chi tiêu quá 150.000₫ mà chưa có đơn hàng nào thì tự động tắt Ad',
+          target: 'ad',
+          conditions: [
+            { metric: 'spend', op: '>', value: 150000, label: 'Chi tiêu > 150.000₫' },
+            { metric: 'conversions', op: '<=', value: 0, label: 'Đơn hàng = 0' }
+          ],
+          action: 'PAUSE',
+          actionParam: 0,
+          actionLabel: 'Tạm dừng Ad ngay lập tức',
+          checkFrequency: '15 phút',
+          enabled: true,
+          createdDate: 'Hệ thống định sẵn'
+        },
+        {
+          id: 'rule_scale_winner',
+          name: 'Tự Động Scale Chiến Dịch Thắng',
+          badge: '🚀 Tăng trưởng',
+          color: 'indigo',
+          naturalText: 'Nếu ROAS đạt từ 3.0 trở lên và có ít nhất 3 đơn hàng thì tăng ngân sách 15%',
+          target: 'campaign',
+          conditions: [
+            { metric: 'roas', op: '>=', value: 3.0, label: 'ROAS >= 3.0x' },
+            { metric: 'conversions', op: '>=', value: 3, label: 'Đơn hàng >= 3' }
+          ],
+          action: 'INCREASE_BUDGET',
+          actionParam: 15,
+          actionLabel: 'Tăng ngân sách 15% (tối đa 1 lần / 24h)',
+          checkFrequency: '24 giờ',
+          enabled: true,
+          createdDate: 'Hệ thống định sẵn'
+        },
+        {
+          id: 'rule_cpa_ceiling',
+          name: 'Bảo Vệ Trần Chi Phí CPA',
+          badge: '⚠️ Kiểm soát rủi ro',
+          color: 'amber',
+          naturalText: 'Nếu CPA vượt quá 120.000₫ và chi tiêu trên 300.000₫ thì giảm ngân sách 20%',
+          target: 'campaign',
+          conditions: [
+            { metric: 'cpa', op: '>', value: 120000, label: 'CPA > 120.000₫' },
+            { metric: 'spend', op: '>', value: 300000, label: 'Chi tiêu > 300.000₫' }
+          ],
+          action: 'DECREASE_BUDGET',
+          actionParam: 20,
+          actionLabel: 'Giảm ngân sách 20%',
+          checkFrequency: '6 giờ',
+          enabled: true,
+          createdDate: 'Hệ thống định sẵn'
+        },
+        {
+          id: 'rule_fatigue_guard',
+          name: 'Cảnh Báo Bão Hòa Tần Suất',
+          badge: '💤 Chống chai tệp',
+          color: 'purple',
+          naturalText: 'Nếu tần suất xem (Frequency) > 2.5 và CTR < 1.0% thì cảnh báo bão hòa nội dung',
+          target: 'creative',
+          conditions: [
+            { metric: 'frequency', op: '>', value: 2.5, label: 'Tần suất > 2.5' },
+            { metric: 'ctr', op: '<', value: 1.0, label: 'CTR < 1.0%' }
+          ],
+          action: 'NOTIFY',
+          actionParam: 0,
+          actionLabel: 'Gửi cảnh báo và gợi ý làm mới Creative',
+          checkFrequency: '12 giờ',
+          enabled: true,
+          createdDate: 'Hệ thống định sẵn'
+        }
+      ];
+
+      this.saveRules(defaults);
+      return defaults;
+    }
+
+    saveRules(rules) {
+      this.rules = rules;
+      localStorage.setItem(this.storageKey, JSON.stringify(rules));
+    }
+
+    getRules() {
+      return this.rules;
+    }
+
+    toggleRule(ruleId) {
+      const r = this.rules.find(x => x.id === ruleId);
+      if (r) {
+        r.enabled = !r.enabled;
+        this.saveRules(this.rules);
+      }
+      return r;
+    }
+
+    deleteRule(ruleId) {
+      this.rules = this.rules.filter(x => x.id !== ruleId);
+      this.saveRules(this.rules);
+    }
+
+    addRule(rule) {
+      this.rules.unshift(rule);
+      this.saveRules(this.rules);
+      return rule;
+    }
+
+    async parseFromNaturalLanguage(nlText) {
+      const text = (nlText || '').trim();
+      const lower = text.toLowerCase();
+
+      // 1. If Gemini is available, ask Gemini to parse into JSON rule
+      if (this.assistantEngine && this.assistantEngine.getGeminiApiKey()) {
+        try {
+          const geminiRule = await this.parseWithGemini(text);
+          if (geminiRule && geminiRule.name) return geminiRule;
+        } catch (e) {
+          console.warn('Gemini rule parsing fallback:', e);
+        }
+      }
+
+      // 2. Local rule extractor
+      let target = 'ad';
+      if (lower.includes('chiến dịch') || lower.includes('campaign') || lower.includes('ngân sách')) {
+        target = 'campaign';
+      } else if (lower.includes('nhóm') || lower.includes('ad set') || lower.includes('adset')) {
+        target = 'adSet';
+      } else if (lower.includes('creative') || lower.includes('video') || lower.includes('nội dung')) {
+        target = 'creative';
+      }
+
+      let action = 'PAUSE';
+      let actionParam = 0;
+      let actionLabel = 'Tạm dừng ngay lập tức';
+
+      if (lower.includes('tăng ngân sách') || lower.includes('vít') || lower.includes('scale')) {
+        action = 'INCREASE_BUDGET';
+        actionParam = 15;
+        const matchPct = lower.match(/(\d+)\s*%/);
+        if (matchPct) actionParam = parseInt(matchPct[1], 10);
+        actionLabel = `Tăng ngân sách ${actionParam}%`;
+      } else if (lower.includes('giảm ngân sách') || lower.includes('hạ ngân sách')) {
+        action = 'DECREASE_BUDGET';
+        actionParam = 20;
+        const matchPct = lower.match(/(\d+)\s*%/);
+        if (matchPct) actionParam = parseInt(matchPct[1], 10);
+        actionLabel = `Giảm ngân sách ${actionParam}%`;
+      } else if (lower.includes('cảnh báo') || lower.includes('thông báo') || lower.includes('nhắc')) {
+        action = 'NOTIFY';
+        actionLabel = 'Gửi cảnh báo tới bạn';
+      }
+
+      const conditions = [];
+
+      // Check Spend
+      const spendMatch = lower.match(/(?:chi|tiêu|tiền|spend)\s*(?:quá|trên|>|>=)?\s*(\d+[\.,]?\d*)\s*(triệu|tr|k|nghìn|đ|vnd)?/i);
+      if (spendMatch) {
+        let val = parseFloat(spendMatch[1].replace(',', '.'));
+        const unit = (spendMatch[2] || '').toLowerCase();
+        if (unit === 'triệu' || unit === 'tr') val *= 1000000;
+        else if (unit === 'k' || unit === 'nghìn') val *= 1000;
+        else if (val > 0 && val < 500) val *= 1000;
+        conditions.push({
+          metric: 'spend',
+          op: '>',
+          value: Math.round(val),
+          label: `Chi tiêu > ${window.AdsAI.MetricsCalc.formatVND(val)}`
+        });
+      }
+
+      // Check Conversions / Orders
+      if (lower.includes('chưa có đơn') || lower.includes('không có đơn') || lower.includes('0 đơn')) {
+        conditions.push({ metric: 'conversions', op: '<=', value: 0, label: 'Đơn hàng = 0' });
+      } else {
+        const convMatch = lower.match(/(?:đơn|chuyển đổi|orders)\s*(?:trên|từ|>=|>)\s*(\d+)/i);
+        if (convMatch) {
+          conditions.push({ metric: 'conversions', op: '>=', value: parseInt(convMatch[1], 10), label: `Đơn hàng >= ${convMatch[1]}` });
+        }
+      }
+
+      // Check ROAS
+      const roasMatch = lower.match(/roas\s*(?:trên|từ|>=|>)\s*(\d+[\.,]?\d*)/i);
+      if (roasMatch) {
+        const rVal = parseFloat(roasMatch[1].replace(',', '.'));
+        conditions.push({ metric: 'roas', op: '>=', value: rVal, label: `ROAS >= ${rVal}x` });
+      }
+
+      // Check CPA
+      const cpaMatch = lower.match(/cpa\s*(?:quá|trên|vượt|>|>=)\s*(\d+[\.,]?\d*)\s*(triệu|tr|k|nghìn|đ|vnd)?/i);
+      if (cpaMatch) {
+        let cVal = parseFloat(cpaMatch[1].replace(',', '.'));
+        const unit = (cpaMatch[2] || '').toLowerCase();
+        if (unit === 'k' || unit === 'nghìn') cVal *= 1000;
+        else if (unit === 'triệu' || unit === 'tr') cVal *= 1000000;
+        else if (cVal > 0 && cVal < 500) cVal *= 1000;
+        conditions.push({ metric: 'cpa', op: '>', value: Math.round(cVal), label: `CPA > ${window.AdsAI.MetricsCalc.formatVND(cVal)}` });
+      }
+
+      // Check Frequency
+      const freqMatch = lower.match(/(?:tần suất|frequency|freq)\s*(?:trên|quá|>)\s*(\d+[\.,]?\d*)/i);
+      if (freqMatch) {
+        const fVal = parseFloat(freqMatch[1].replace(',', '.'));
+        conditions.push({ metric: 'frequency', op: '>', value: fVal, label: `Tần suất > ${fVal}` });
+      }
+
+      if (conditions.length === 0) {
+        conditions.push({ metric: 'spend', op: '>', value: 100000, label: 'Chi tiêu > 100.000₫' });
+        conditions.push({ metric: 'conversions', op: '<=', value: 0, label: 'Đơn hàng = 0' });
+      }
+
+      let badge = '🛡️ Tùy chỉnh';
+      let color = 'indigo';
+      if (action === 'PAUSE') { badge = '🛑 Cắt lỗ'; color = 'rose'; }
+      else if (action === 'INCREASE_BUDGET') { badge = '🚀 Scale ngân sách'; color = 'emerald'; }
+      else if (action === 'DECREASE_BUDGET') { badge = '⚠️ Hạ ngân sách'; color = 'amber'; }
+
+      return {
+        id: 'rule_' + Date.now(),
+        name: `Luật: ${actionLabel} khi ${conditions.map(c => c.label).join(' & ')}`,
+        badge,
+        color,
+        naturalText: text,
+        target,
+        conditions,
+        action,
+        actionParam,
+        actionLabel,
+        checkFrequency: '15 phút',
+        enabled: true,
+        createdDate: new Date().toLocaleDateString('vi-VN')
+      };
+    }
+
+    async parseWithGemini(nlText) {
+      const apiKey = this.assistantEngine.getGeminiApiKey();
+      if (!apiKey) return null;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+      const prompt = `Bạn là Trình phân tích luật quảng cáo thông minh (Automated Rules Parser).
+Hãy bóc tách câu lệnh tiếng Việt sau đây thành một cấu trúc JSON luật quảng cáo hợp lệ:
+CÂU LỆNH: "${nlText}"
+
+YÊU CẦU: Trả về DUY NHẤT một chuỗi JSON hợp lệ (không kèm markdown code blocks):
+{
+  "name": "Tên ngắn gọn cho luật (dưới 7 từ)",
+  "badge": "Một emoji và cụm từ ngắn (VD: 🛡️ Cắt lỗ hoặc 🚀 Vít ngân sách)",
+  "color": "rose hoặc indigo hoặc emerald hoặc amber",
+  "target": "ad hoặc adSet hoặc campaign hoặc creative",
+  "conditions": [
+    {
+      "metric": "spend hoặc conversions hoặc roas hoặc cpa hoặc frequency hoặc ctr",
+      "op": "> hoặc < hoặc >= hoặc <=",
+      "value": 150000,
+      "label": "Mô tả điều kiện (VD: Chi tiêu > 150.000₫)"
+    }
+  ],
+  "action": "PAUSE hoặc INCREASE_BUDGET hoặc DECREASE_BUDGET hoặc NOTIFY",
+  "actionParam": 15,
+  "actionLabel": "Mô tả hành động thực thi (VD: Tạm dừng Ad ngay lập tức)",
+  "checkFrequency": "15 phút"
+}`;
+
+      const payload = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) return null;
+
+      text = text.trim().replace(/^```json/i, '').replace(/```$/i, '').trim();
+      const parsed = JSON.parse(text);
+      parsed.id = 'rule_' + Date.now();
+      parsed.naturalText = nlText;
+      parsed.enabled = true;
+      parsed.createdDate = new Date().toLocaleDateString('vi-VN');
+      return parsed;
+    }
+
+    async evaluateSingleRule(rule) {
+      const matches = [];
+
+      const checkEntity = (entity, metrics, typeName) => {
+        let pass = true;
+        for (const cond of rule.conditions) {
+          const val = metrics[cond.metric];
+          if (val === undefined || val === null) {
+            pass = false;
+            break;
+          }
+          if (cond.op === '>' && !(val > cond.value)) pass = false;
+          else if (cond.op === '>=' && !(val >= cond.value)) pass = false;
+          else if (cond.op === '<' && !(val < cond.value)) pass = false;
+          else if (cond.op === '<=' && !(val <= cond.value)) pass = false;
+          else if (cond.op === '=' && !(val === cond.value)) pass = false;
+          if (!pass) break;
+        }
+
+        if (pass) {
+          matches.push({
+            entityId: entity.id,
+            entityName: entity.name,
+            entityType: typeName,
+            platform: entity.platform,
+            metrics: {
+              spend: metrics.spend,
+              conversions: metrics.conversions,
+              roas: metrics.roas,
+              cpa: metrics.cpa,
+              frequency: metrics.frequency || 1.0,
+              ctr: metrics.ctr || 0
+            },
+            ruleId: rule.id,
+            ruleName: rule.name,
+            action: rule.action,
+            actionLabel: rule.actionLabel,
+            actionParam: rule.actionParam
+          });
+        }
+      };
+
+      if (rule.target === 'campaign') {
+        const campaigns = await this.dataEngine.getCampaignsWithMetrics();
+        campaigns.filter(c => c.status === 'ACTIVE').forEach(c => checkEntity(c, c.metrics, 'campaign'));
+      } else if (rule.target === 'adSet') {
+        const adSets = await this.dataEngine.getAdSetsWithMetrics();
+        adSets.filter(s => s.status === 'ACTIVE').forEach(s => checkEntity(s, s.metrics, 'adSet'));
+      } else if (rule.target === 'ad') {
+        const ads = await this.dataEngine.getAdsWithMetrics();
+        ads.filter(a => a.status === 'ACTIVE').forEach(a => checkEntity(a, a.metrics, 'ad'));
+      } else if (rule.target === 'creative') {
+        const creatives = await this.dataEngine.getAllCreatives();
+        creatives.forEach(cr => checkEntity(cr, {
+          spend: cr.spend,
+          conversions: Math.round(cr.spend / (cr.cpa || 50000)),
+          roas: cr.roas,
+          cpa: cr.cpa,
+          frequency: cr.frequency,
+          ctr: cr.ctr
+        }, 'creative'));
+      }
+
+      return matches;
+    }
+
+    async evaluateAllEnabledRules() {
+      const enabledRules = this.rules.filter(r => r.enabled);
+      const allMatches = [];
+
+      for (const rule of enabledRules) {
+        const matches = await this.evaluateSingleRule(rule);
+        allMatches.push(...matches);
+      }
+
+      return allMatches;
+    }
+  }
+
   window.AdsAI = window.AdsAI || {};
   window.AdsAI.AIAssistantEngine = AIAssistantEngine;
   window.AdsAI.AICommandParser = AICommandParser;
@@ -728,5 +1118,6 @@ YÊU CẦU: Trả về DUY NHẤT một chuỗi JSON hợp lệ (KHÔNG kèm mar
   window.AdsAI.PlanGenerator = PlanGenerator;
   window.AdsAI.AutopilotManager = AutopilotManager;
   window.AdsAI.CreativeStudioEngine = CreativeStudioEngine;
+  window.AdsAI.AIRulesEngine = AIRulesEngine;
 
 })(window);

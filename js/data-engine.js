@@ -1387,6 +1387,9 @@
       } else if (entityType === 'campaign') {
         target = prov.data.campaigns.find(c => c.id === entityId);
         title = target ? `Tạm dừng Chiến dịch: ${target.name}` : `Tạm dừng Chiến dịch ${entityId}`;
+      } else if (entityType === 'ad') {
+        target = prov.data.ads.find(a => a.id === entityId);
+        title = target ? `Tạm dừng Ad: ${target.name}` : `Tạm dừng Ad ${entityId}`;
       }
 
       if (!target) return false;

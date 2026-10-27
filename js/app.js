@@ -310,6 +310,7 @@
       this.autopilotManager = new window.AdsAI.AutopilotManager(this.dataEngine);
       this.clarificationMachine = new window.AdsAI.ClarificationStateMachine();
       this.creativeStudioEngine = new window.AdsAI.CreativeStudioEngine(this.aiEngine);
+      this.rulesEngine = new window.AdsAI.AIRulesEngine(this.dataEngine, this.aiEngine);
       this.activeCreativeTab = 'studio';
       this.currentGeneratedScripts = null;
       this.currentPlan = null;
@@ -625,6 +626,65 @@
           text.className = "text-xs font-bold text-slate-700";
         }
       }
+
+      this.renderRulesTab();
+    }
+
+    renderRulesTab() {
+      const container = document.getElementById('rulesListContainer');
+      const countEl = document.getElementById('activeRulesCount');
+      if (!container || !this.rulesEngine) return;
+
+      const rules = this.rulesEngine.getRules();
+      if (countEl) countEl.textContent = rules.filter(r => r.enabled).length;
+
+      container.innerHTML = rules.map(rule => {
+        let badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
+        if (rule.color === 'rose') badgeColor = 'bg-rose-100 text-rose-800 border-rose-200';
+        else if (rule.color === 'indigo') badgeColor = 'bg-indigo-100 text-indigo-800 border-indigo-200';
+        else if (rule.color === 'emerald') badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        else if (rule.color === 'amber') badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
+        else if (rule.color === 'purple') badgeColor = 'bg-purple-100 text-purple-800 border-purple-200';
+
+        return `
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-xs transition space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-start sm:items-center gap-3">
+                <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor} shrink-0">${rule.badge}</span>
+                <div>
+                  <h5 class="font-bold text-sm text-slate-900">${rule.name}</h5>
+                  <p class="text-xs text-slate-500 italic">“${rule.naturalText}”</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 shrink-0">
+                <span class="text-[11px] text-slate-400 font-mono">Chu kỳ: ${rule.checkFrequency}</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="window.toggleAutomationRule('${rule.id}')" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-slate-400 font-bold uppercase text-[10px]">ĐIỀU KIỆN:</span>
+                <span class="text-indigo-700 font-semibold">${rule.conditions.map(c => c.label).join(' VÀ ')}</span>
+                <span class="text-slate-400">➔</span>
+                <span class="text-slate-400 font-bold uppercase text-[10px]">HÀNH ĐỘNG:</span>
+                <span class="text-rose-600 font-bold">${rule.actionLabel}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button onclick="window.dryRunSingleRule('${rule.id}')" class="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 font-bold text-[11px] transition">
+                  🔍 Quét thử
+                </button>
+                <button onclick="window.deleteAutomationRule('${rule.id}')" class="text-slate-400 hover:text-rose-600 text-[11px] font-bold transition px-2 py-1">
+                  Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     renderActivityLogTable() {
@@ -1997,7 +2057,7 @@
   };
 
   window.switchAgentTab = function(tabName) {
-    ['chat', 'activity', 'autopilot'].forEach(t => {
+    ['chat', 'activity', 'autopilot', 'rules'].forEach(t => {
       const btn = document.getElementById(`agentTabBtn-${t}`);
       const content = document.getElementById(`agentTabContent-${t}`);
       if (btn && content) {
@@ -2013,6 +2073,8 @@
 
     if (tabName === 'activity') {
       window.app.renderActivityLogTable();
+    } else if (tabName === 'rules') {
+      window.app.renderRulesTab();
     }
   };
 
@@ -2195,6 +2257,161 @@ ${sc.psychologicalTrigger || 'Tập trung kích thích cảm xúc và giữ châ
       if (catInput) catInput.value = category;
     }
     window.app.generateStudioScripts();
+  };
+
+  // 15. No-code AI Rules Global Handlers
+  window.fillNlRule = function(text) {
+    const input = document.getElementById('nlRuleInput');
+    if (input) input.value = text;
+  };
+
+  window.createRuleFromInput = async function() {
+    const input = document.getElementById('nlRuleInput');
+    if (!input || !input.value.trim()) {
+      alert('Vui lòng nhập câu lệnh hoặc chọn một câu lệnh mẫu!');
+      return;
+    }
+
+    const text = input.value.trim();
+    const btn = event?.currentTarget;
+    if (btn) btn.disabled = true;
+
+    try {
+      const newRule = await window.app.rulesEngine.parseFromNaturalLanguage(text);
+      window.app.rulesEngine.addRule(newRule);
+      input.value = '';
+      window.app.renderRulesTab();
+      alert(`✅ Đã tạo thành công luật: "${newRule.name}"\nHệ thống sẽ tự động giám sát theo chu kỳ.`);
+    } catch (e) {
+      alert(`⚠️ Lỗi khi phân tích câu lệnh: ${e.message}`);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  };
+
+  window.toggleAutomationRule = function(ruleId) {
+    const r = window.app.rulesEngine.toggleRule(ruleId);
+    if (r) {
+      const statusText = r.enabled ? 'ĐÃ BẬT' : 'ĐÃ TẮT';
+      console.log(`Luật ${r.name}: ${statusText}`);
+      window.app.renderRulesTab();
+    }
+  };
+
+  window.deleteAutomationRule = function(ruleId) {
+    if (confirm('Bạn có chắc chắn muốn xóa luật tự động này?')) {
+      window.app.rulesEngine.deleteRule(ruleId);
+      window.app.renderRulesTab();
+    }
+  };
+
+  window.dryRunSingleRule = async function(ruleId) {
+    const rule = window.app.rulesEngine.getRules().find(r => r.id === ruleId);
+    if (!rule) return;
+
+    const matches = await window.app.rulesEngine.evaluateSingleRule(rule);
+    window.renderRuleEvaluationResults([rule], matches, true);
+  };
+
+  window.runDryRunAllRules = async function() {
+    const matches = await window.app.rulesEngine.evaluateAllEnabledRules();
+    const enabledRules = window.app.rulesEngine.getRules().filter(r => r.enabled);
+    window.renderRuleEvaluationResults(enabledRules, matches, true);
+  };
+
+  window.executeActiveRulesNow = async function() {
+    const matches = await window.app.rulesEngine.evaluateAllEnabledRules();
+    if (matches.length === 0) {
+      alert('✅ Quét hoàn tất: Hiện tại không có quảng cáo hoặc chiến dịch nào vi phạm điều kiện của các luật đang bật.');
+      return;
+    }
+
+    const actions = matches.map(m => {
+      return `${m.actionLabel} trên [${m.entityType.toUpperCase()}] "${m.entityName}" (${m.platform.toUpperCase()}) — Lý do: Chi tiêu ${window.AdsAI.MetricsCalc.formatVND(m.metrics.spend)}, ${m.metrics.conversions} đơn, ROAS ${m.metrics.roas}`;
+    });
+
+    window.prepareActionApproval({
+      title: `Thực thi ${matches.length} tác vụ tự động hóa (AI Rules)`,
+      actions,
+      budgetLabel: `Áp dụng cho ${matches.length} đối tượng quảng cáo`,
+      onConfirm: async () => {
+        for (const m of matches) {
+          if (m.action === 'PAUSE') {
+            await window.app.dataEngine.pauseEntityDynamic(m.entityType, m.entityId);
+          } else if (m.action === 'INCREASE_BUDGET') {
+            const currentB = m.metrics.spend * 1.5;
+            await window.app.dataEngine.updateBudgetDynamic(m.entityType, m.entityId, currentB * 1.15);
+          } else if (m.action === 'DECREASE_BUDGET') {
+            const currentB = m.metrics.spend * 1.5;
+            await window.app.dataEngine.updateBudgetDynamic(m.entityType, m.entityId, currentB * 0.8);
+          }
+        }
+        alert(`✅ Đã thực thi thành công ${matches.length} tác vụ tự động!`);
+        window.app.refreshCurrentScreen();
+        window.renderRuleEvaluationResults([], [], false);
+      }
+    });
+  };
+
+  window.renderRuleEvaluationResults = function(rules, matches, isDryRun = true) {
+    const container = document.getElementById('rulesEvaluationResults');
+    if (!container) return;
+
+    if (matches.length === 0) {
+      container.className = "p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs flex items-center justify-between";
+      container.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="text-base">✅</span>
+          <span><strong>Quét thử an toàn:</strong> Không có chiến dịch hoặc quảng cáo nào vi phạm điều kiện luật lúc này.</span>
+        </div>
+        <button onclick="document.getElementById('rulesEvaluationResults').classList.add('hidden')" class="text-emerald-600 hover:text-emerald-900 font-bold">✕ Đóng</button>
+      `;
+      container.classList.remove('hidden');
+      return;
+    }
+
+    const itemsHtml = matches.map(m => `
+      <div class="p-3 bg-white rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.platform === 'meta' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">${m.platform.toUpperCase()}</span>
+            <strong class="text-slate-900">${m.entityName}</strong>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">${m.entityType}</span>
+          </div>
+          <div class="text-[11px] text-slate-500 mt-1">
+            Chỉ số: Chi tiêu ${window.AdsAI.MetricsCalc.formatVND(m.metrics.spend)} • Đơn: ${m.metrics.conversions} • ROAS: ${m.metrics.roas} • CPA: ${window.AdsAI.MetricsCalc.formatVND(m.metrics.cpa)}
+          </div>
+        </div>
+        <div class="text-right shrink-0">
+          <span class="inline-flex items-center gap-1 font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+            <span>➔ Dự kiến:</span>
+            <span>${m.actionLabel}</span>
+          </span>
+        </div>
+      </div>
+    `).join('');
+
+    container.className = "p-5 bg-amber-50/80 border-2 border-amber-300 rounded-3xl space-y-3";
+    container.innerHTML = `
+      <div class="flex items-center justify-between border-b border-amber-200 pb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-base">🔍</span>
+          <h5 class="font-bold text-xs uppercase tracking-wider text-amber-900">
+            Kết quả quét thử: Phát hiện ${matches.length} đối tượng thỏa mãn điều kiện
+          </h5>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.executeActiveRulesNow()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-xs">
+            ⚡ Thực thi ngay
+          </button>
+          <button onclick="document.getElementById('rulesEvaluationResults').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-xs px-2">✕</button>
+        </div>
+      </div>
+      <div class="space-y-2">
+        ${itemsHtml}
+      </div>
+    `;
+    container.classList.remove('hidden');
   };
 
   // Auto-boot on DOM ready

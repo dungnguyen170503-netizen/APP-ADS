@@ -1562,6 +1562,10 @@
             <button onclick="window.switchAgentTab('autopilot')" id="agentTabBtn-autopilot" class="px-3 py-1.5 rounded-xl hover:text-slate-900 transition">
               ⚡ Cấu hình Autopilot
             </button>
+            <button onclick="window.switchAgentTab('rules')" id="agentTabBtn-rules" class="px-3 py-1.5 rounded-xl hover:text-slate-900 transition flex items-center gap-1.5">
+              <span>🛡️ Luật Tự Động (Rules)</span>
+              <span class="text-[9px] bg-indigo-100 text-indigo-700 font-extrabold px-1.5 py-0.2 rounded-full">MỚI</span>
+            </button>
           </div>
         </div>
 
@@ -1733,6 +1737,88 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 4: NO-CODE AI RULES MANAGER (REVEALBOT STYLE) -->
+        <!-- =================================================================== -->
+        <div id="agentTabContent-rules" class="hidden space-y-6">
+          
+          <!-- Rules Header & Quick Run -->
+          <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-3xl shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] bg-indigo-500/30 text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full border border-indigo-400/30">NO-CODE AUTOMATION</span>
+                <span class="text-xs text-slate-300">Giám sát & Tự Động Hóa 24/7</span>
+              </div>
+              <h3 class="text-lg font-black tracking-tight">Trợ Lý Thiết Lập Luật Tự Động (AI Rules)</h3>
+              <p class="text-xs text-slate-400 max-w-xl">Học tập mô hình Revealbot: Đặt luật bằng tiếng Việt tự nhiên để bảo vệ ngân sách hoặc tự động vít bài thắng mà không sợ rủi ro.</p>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <button onclick="window.runDryRunAllRules()" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/15 flex items-center gap-1.5">
+                <span>🔍 Quét thử (Dry Run)</span>
+              </button>
+              <button onclick="window.executeActiveRulesNow()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5">
+                <span>⚡ Quét & Thực thi ngay</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Natural Language Rule Creator -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                <h4 class="font-bold text-xs uppercase tracking-wider text-indigo-700">Tạo luật mới bằng câu nói tiếng Việt</h4>
+              </div>
+              <span class="text-[10px] text-slate-400">AI tự phân tích điều kiện & hành động</span>
+            </div>
+
+            <div class="relative">
+              <textarea id="nlRuleInput" rows="2" class="w-full text-xs sm:text-sm p-4 pr-28 rounded-2xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition resize-none placeholder:text-slate-400 font-medium" placeholder="Ví dụ: Nếu chi quá 120k mà chưa có đơn nào thì tự động tắt ad này ngay..."></textarea>
+              <button onclick="window.createRuleFromInput()" class="absolute right-3 bottom-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5">
+                <span>🪄 Tạo Luật</span>
+              </button>
+            </div>
+
+            <!-- Quick Template Chips -->
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-bold text-slate-400 block">Chọn nhanh luật mẫu an toàn cho người mới:</span>
+              <div class="flex flex-wrap gap-2 text-xs">
+                <button type="button" onclick="window.fillNlRule('Nếu chi quá 150k mà không ra đơn nào thì tắt ngay')" class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold border border-rose-200/60 transition">
+                  🛑 Tắt Ad khi chi > 150k mà 0 đơn
+                </button>
+                <button type="button" onclick="window.fillNlRule('Nếu ROAS lớn hơn 3.0 và có từ 3 đơn trở lên thì tăng ngân sách 15%')" class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold border border-indigo-200/60 transition">
+                  🚀 Tăng 15% ngân sách khi ROAS > 3.0
+                </button>
+                <button type="button" onclick="window.fillNlRule('Nếu CPA vượt quá 120k và chi trên 300k thì giảm ngân sách 20%')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 font-semibold border border-amber-200/60 transition">
+                  ⚠️ Giảm 20% ngân sách khi CPA > 120k
+                </button>
+                <button type="button" onclick="window.fillNlRule('Nếu tần suất xem quảng cáo trên 2.5 và CTR dưới 1.0% thì cảnh báo bão hòa')" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 font-semibold border border-purple-200/60 transition">
+                  💤 Cảnh báo khi tần suất > 2.5
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Evaluation / Dry Run Results Notification Area -->
+          <div id="rulesEvaluationResults" class="hidden">
+            <!-- Dynamically populated when dry run or run is clicked -->
+          </div>
+
+          <!-- Active Rules List -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between px-1">
+              <h4 class="font-bold text-xs uppercase tracking-wider text-slate-500">Danh sách luật đang cài đặt (<span id="activeRulesCount">4</span>)</h4>
+              <span class="text-[11px] text-slate-400">Kiểm tra tự động theo chu kỳ</span>
+            </div>
+
+            <div id="rulesListContainer" class="space-y-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
         </div>
 
       </section>
