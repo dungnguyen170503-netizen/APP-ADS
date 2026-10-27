@@ -56,6 +56,18 @@
       .app-screen { display: block !important; padding: 0 !important; max-width: 100% !important; }
       .print-page-break { page-break-before: always; }
     }
+
+    .kpi-explain-box {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, opacity 0.25s ease-out, margin-top 0.25s ease-out;
+      opacity: 0;
+    }
+    .kpi-explain-box.expanded {
+      max-height: 250px;
+      opacity: 1;
+      margin-top: 0.75rem;
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased h-full flex flex-col overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-700">
@@ -98,26 +110,26 @@
   <!-- ========================================================================= -->
   <!-- TOP STATUS BANNER (Mode & Emergency Controls) -->
   <!-- ========================================================================= -->
-  <div id="liveStatusBanner" class="bg-slate-900 text-white px-4 py-2 text-xs flex items-center justify-between shrink-0 no-print border-b border-slate-800">
+  <div id="liveStatusBanner" class="bg-amber-500/10 text-amber-900 border-b border-amber-200 px-4 py-2 text-xs flex items-center justify-between shrink-0 no-print transition-colors">
     <div class="flex items-center gap-2.5">
-      <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-400/20 text-emerald-400 border border-emerald-500/30">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>NTDAds AI AGENT ACTIVE</span>
+      <span id="bannerBadge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+        <span id="bannerBadgeText">CHẾ ĐỘ DÙNG THỬ (DEMO)</span>
       </span>
-      <span id="bannerModeText" class="font-medium text-slate-300 hidden sm:inline">Hệ thống sẵn sàng: Tự động giám sát, đề xuất tối ưu và lập kế hoạch đa nền tảng Meta + TikTok.</span>
+      <span id="bannerModeText" class="font-medium text-slate-700 hidden sm:inline">Dữ liệu mẫu mô phỏng an toàn 100% — Chưa trừ tiền thật. AI tự động hỗ trợ bạn tối ưu ngân sách.</span>
     </div>
     <div class="flex items-center gap-3">
-      <!-- Kill Switch Button -->
-      <button onclick="window.triggerKillSwitch()" title="Dừng toàn bộ các tác vụ tự động ngay lập tức" class="flex items-center gap-1.5 bg-rose-600/90 hover:bg-rose-600 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-xs">
-        <span>🛑 STOP AUTOPILOT</span>
+      <!-- Kill Switch Button (Hidden by default in Copilot/Demo mode) -->
+      <button id="bannerKillSwitchBtn" onclick="window.triggerKillSwitch()" title="Dừng toàn bộ các tác vụ tự động ngay lập tức" class="hidden items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-xs animate-pulse">
+        <span>🛑 DỪNG TỰ ĐỘNG (KILL SWITCH)</span>
       </button>
       <!-- Jargon Modal Trigger -->
-      <button onclick="window.openJargonModal()" class="text-slate-300 hover:text-white font-semibold text-[11px] flex items-center gap-1">
+      <button onclick="window.openJargonModal()" class="text-slate-700 hover:text-indigo-700 font-semibold text-[11px] flex items-center gap-1">
         <span>Giải thích chỉ số ⓘ</span>
       </button>
       <!-- OAuth Quick Connect -->
-      <button onclick="window.openOAuthModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition">
-        🔗 Kết nối Tài khoản
+      <button onclick="window.openOAuthModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition shadow-xs flex items-center gap-1">
+        <span>🔗 Kết nối Tài khoản Thật</span>
       </button>
     </div>
   </div>
@@ -130,7 +142,7 @@
     <!-- ======================================================================= -->
     <!-- GLOBAL SIDEBAR NAVIGATION (STREAMLINED 5-AREA ARCHITECTURE) -->
     <!-- ======================================================================= -->
-    <aside id="mainSidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all z-30 no-print">
+    <aside id="mainSidebar" class="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col justify-between shrink-0 transition-all z-30 no-print">
       <div>
         <!-- Logo & Brand -->
         <div class="h-16 flex items-center px-6 border-b border-slate-100 gap-3">
@@ -292,7 +304,7 @@
           </select>
 
           <!-- Quick Action Buttons -->
-          <button onclick="window.app.triggerExportExcel()" title="Xuất báo cáo Excel (.xlsx)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl transition shadow-xs">
+          <button id="headerExportExcelBtn" onclick="window.app.triggerExportExcel()" title="Xuất báo cáo Excel (.xlsx)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl transition shadow-xs">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span>Xuất Excel</span>
           </button>
@@ -312,7 +324,7 @@
             <p class="text-xs text-slate-500">Đăng nhập để quản trị và tối ưu chiến dịch Meta & TikTok</p>
           </div>
 
-          <form onsubmit="event.preventDefault(); window.app.navigateTo('screen-dashboard');" class="space-y-4 text-xs">
+          <form onsubmit="event.preventDefault(); window.setUIMode('simple'); window.app.navigateTo('screen-command-center');" class="space-y-4 text-xs">
             <div>
               <label class="font-bold text-slate-700 block mb-1">Email Doanh nghiệp</label>
               <input type="email" value="admin@kstudy.vn" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none" />
@@ -333,10 +345,18 @@
             </button>
           </form>
 
-          <div class="pt-2 border-t border-slate-100 text-center">
-            <button onclick="window.app.navigateTo('screen-dashboard')" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:underline flex items-center justify-center gap-1.5 mx-auto">
-              <span>🌟 Trải nghiệm ngay chế độ Demo Mode (Không cần tài khoản)</span> →
-            </button>
+          <div class="pt-4 border-t border-slate-100 text-center space-y-2">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Hoặc trải nghiệm thử (Demo Mode)</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <button onclick="window.setUIMode('simple'); window.app.navigateTo('screen-command-center');" class="p-3 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/70 text-indigo-900 text-left transition space-y-0.5">
+                <span class="font-extrabold flex items-center gap-1.5 text-xs text-indigo-700"><span>🐣</span> Dành cho Chủ shop</span>
+                <p class="text-[10px] text-slate-500">Chưa biết chạy Ads, dùng AI ra lệnh tự nhiên</p>
+              </button>
+              <button onclick="window.setUIMode('pro'); window.app.navigateTo('screen-dashboard');" class="p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-left transition space-y-0.5">
+                <span class="font-extrabold flex items-center gap-1.5 text-xs text-slate-800"><span>⚡</span> Dành cho Marketer</span>
+                <p class="text-[10px] text-slate-500">Xem bảng Dashboard đầy đủ 8 KPIs & Pivot</p>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -398,6 +418,32 @@
       <!-- ===================================================================== -->
       <section id="screen-command-center" class="app-screen p-6 max-w-7xl mx-auto w-full space-y-8">
         
+        <!-- ONBOARDING PROGRESSIVE WELCOME BANNER (DÀNH CHO NGƯỜI DÙNG MỚI) -->
+        <div id="newbieWelcomeCard" class="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-6 rounded-3xl border border-indigo-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center shadow-md shadow-indigo-300 shrink-0">
+              👋
+            </div>
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <h3 class="font-black text-base text-slate-900 tracking-tight">Chào bạn! Chưa từng chạy Ads? Đừng lo!</h3>
+                <span class="text-[10px] bg-indigo-100 text-indigo-700 font-extrabold px-2 py-0.5 rounded-full">3 BƯỚC ĐƠN GIẢN</span>
+              </div>
+              <p class="text-xs text-slate-600 max-w-2xl leading-relaxed">
+                Bạn chỉ cần gõ <strong>mục tiêu bán hàng</strong> (Ví dụ: <em>bán 50 cái áo thun, ngân sách 5 triệu</em>) vào ô bên dưới. AI sẽ tự tính toán đối tượng, phân bổ ngân sách Meta/TikTok và chuẩn bị kế hoạch cho bạn duyệt.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="document.getElementById('cmdInputHero').focus();" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5">
+              <span>✍️ Thử câu lệnh ngay</span>
+            </button>
+            <button onclick="document.getElementById('newbieWelcomeCard').classList.add('hidden')" title="Đóng hướng dẫn" class="p-2 text-slate-400 hover:text-slate-600 transition text-sm">
+              ✕
+            </button>
+          </div>
+        </div>
+
         <!-- AGENT STATUS BAR -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-4 rounded-3xl shadow-lg border border-purple-500/20">
           <div class="flex items-center gap-3">
@@ -532,48 +578,75 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-base">📊</span>
-              <h3 class="font-extrabold text-slate-900 text-sm tracking-tight uppercase">Tình hình tài khoản hôm nay</h3>
+              <h3 id="cmdKpiSectionTitle" class="font-extrabold text-slate-900 text-sm tracking-tight uppercase">Tình hình tài khoản hôm nay</h3>
             </div>
             <button onclick="window.openJargonModal()" class="text-xs text-indigo-600 hover:underline font-semibold flex items-center gap-1">
               <span>Công thức tính lợi nhuận & chỉ số</span> ⓘ
             </button>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <!-- 1. Doanh thu -->
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-1">
+          <div id="cmdKpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            <!-- 1. Doanh thu / Tiền bán được -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-1 transition hover:border-indigo-300">
               <div class="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase">
-                <span>Doanh thu</span>
+                <span id="label-kpi-revenue">Doanh thu bán được</span>
                 <span class="text-emerald-600 font-bold">+18.6%</span>
               </div>
               <div id="cmd-kpi-revenue" class="text-2xl font-black text-slate-900">...</div>
-              <p class="text-[11px] text-slate-400">Doanh thu ghi nhận từ chuyển đổi</p>
+              <div class="flex items-center justify-between pt-1">
+                <p id="sub-kpi-revenue" class="text-[11px] text-slate-400">Doanh thu ghi nhận từ đơn hàng</p>
+                <button onclick="window.toggleKpiExplanation('explain-revenue')" class="text-indigo-600 font-semibold hover:underline text-[11px]">
+                  Chi tiết ▾
+                </button>
+              </div>
+              <div id="explain-revenue" class="kpi-explain-box p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-[11px] text-indigo-950 space-y-1">
+                <p><strong>📖 Ý nghĩa:</strong> Tổng số tiền khách đã đặt mua hàng qua các mẫu quảng cáo Facebook & TikTok của bạn trong chu kỳ này.</p>
+                <p class="text-indigo-700"><strong>💡 Mẹo:</strong> Nếu số này tăng nhưng "Tiền lời thực tế" không tăng, hãy kiểm tra lại tỷ lệ hoàn đơn hoặc tiền quảng cáo bị tăng quá nhanh.</p>
+              </div>
             </div>
 
-            <!-- 2. Ads Spend -->
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-1">
+            <!-- 2. Ads Spend / Tiền quảng cáo đã chi -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-1 transition hover:border-indigo-300">
               <div class="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase">
-                <span>Tiền Ads đã chi</span>
+                <span id="label-kpi-spend">Tiền quảng cáo đã chi</span>
                 <span class="text-indigo-600 font-bold">Meta 60% • TikTok 40%</span>
               </div>
               <div id="cmd-kpi-spend" class="text-2xl font-black text-slate-900">...</div>
-              <p class="text-[11px] text-slate-400">Phân bổ đều theo phễu chuyển đổi</p>
+              <div class="flex items-center justify-between pt-1">
+                <p id="sub-kpi-spend" class="text-[11px] text-slate-400">Tiền trả cho Facebook & TikTok</p>
+                <button onclick="window.toggleKpiExplanation('explain-spend')" class="text-indigo-600 font-semibold hover:underline text-[11px]">
+                  Chi tiết ▾
+                </button>
+              </div>
+              <div id="explain-spend" class="kpi-explain-box p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-[11px] text-indigo-950 space-y-1">
+                <p><strong>📖 Ý nghĩa:</strong> Tổng số tiền tài khoản thẻ của bạn đã bị Facebook và TikTok trừ để hiển thị quảng cáo.</p>
+                <p class="text-indigo-700"><strong>💡 Tỷ trọng khuyên dùng:</strong> 60% ngân sách cho Meta (ra đơn chuẩn) và 40% cho TikTok (kéo khách mới & video lan tỏa).</p>
+              </div>
             </div>
 
             <!-- 3. Lãi/Lỗ ước tính sau Ads (Rule #23) -->
-            <div class="bg-white p-5 rounded-3xl border-2 border-emerald-100 shadow-xs space-y-1 bg-gradient-to-b from-emerald-50/30 to-white">
+            <div class="bg-white p-5 rounded-3xl border-2 border-emerald-100 shadow-xs space-y-1 bg-gradient-to-b from-emerald-50/30 to-white transition hover:border-emerald-300">
               <div class="flex items-center justify-between text-emerald-700 font-bold text-[11px] uppercase">
-                <span>Lãi ước tính sau Ads</span>
-                <button onclick="window.openJargonModal('profit')" title="Xem công thức chi tiết" class="text-emerald-700 hover:underline">ⓘ</button>
+                <span id="label-kpi-profit">Lãi ước tính thực tế</span>
+                <span class="text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded font-extrabold text-emerald-800">CỐT LÕI</span>
               </div>
               <div id="cmd-kpi-profit" class="text-2xl font-black text-emerald-600">...</div>
-              <p class="text-[11px] text-slate-500 truncate" title="Doanh thu - Giá vốn (45%) - Phí sàn (7%) - Tiền Ads">Đã trừ giá vốn 45% & phí sàn</p>
+              <div class="flex items-center justify-between pt-1">
+                <p id="sub-kpi-profit" class="text-[11px] text-slate-500 truncate" title="Doanh thu - Giá vốn (45%) - Phí sàn (7%) - Tiền Ads">Đã trừ vốn 45% & phí sàn</p>
+                <button onclick="window.toggleKpiExplanation('explain-profit')" class="text-emerald-700 font-semibold hover:underline text-[11px]">
+                  Công thức ▾
+                </button>
+              </div>
+              <div id="explain-profit" class="kpi-explain-box p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-950 space-y-1">
+                <p><strong>📖 Công thức thực tế:</strong> <code>Tiền bán được - Giá vốn hàng (45%) - Phí sàn/ship (7%) - Tiền Ads</code>.</p>
+                <p class="text-emerald-800"><strong>✅ Minh bạch:</strong> NTDAds tính toán dựa trên lợi nhuận thật sau khi bỏ túi, không bao giờ lấy Doanh thu trừ tiền Ads rồi gọi bừa là "Lãi".</p>
+              </div>
             </div>
 
-            <!-- 4. Health Score (0-100) -->
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-2">
+            <!-- 4. Health Score (Chỉ hiển thị khi Pro Mode, ẩn trong Simple Mode để Newbie không bối rối) -->
+            <div id="cmd-card-health" class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-2">
               <div class="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase">
-                <span>Health Score</span>
+                <span>Điểm Sức Khỏe (Health Score)</span>
                 <button onclick="window.app.navigateTo('screen-campaign-detail')" class="text-indigo-600 font-bold hover:underline">Chi tiết →</button>
               </div>
               <div class="flex items-baseline gap-2">
@@ -640,9 +713,9 @@
         </div>
 
         <!-- =================================================================== -->
-        <!-- CREATIVE SPOTLIGHT (WINNER VS FATIGUE) -->
+        <!-- CREATIVE SPOTLIGHT (WINNER VS FATIGUE - HIỂN THỊ TRONG PRO MODE) -->
         <!-- =================================================================== -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="cmdCreativeSpotlight" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Winner -->
           <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
             <div class="flex items-center justify-between">
@@ -1790,6 +1863,32 @@
 
     </main>
   </div>
+
+  <!-- ========================================================================= -->
+  <!-- MOBILE BOTTOM NAVIGATION BAR (FIXED FOR SMALL SCREENS) -->
+  <!-- ========================================================================= -->
+  <nav id="mobileBottomNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 px-2 py-1.5 flex items-center justify-around text-slate-600 no-print">
+    <button onclick="window.app.navigateTo('screen-command-center')" class="flex flex-col items-center gap-0.5 p-1 text-indigo-600 font-bold focus:outline-none">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      <span class="text-[10px]">Trang chủ</span>
+    </button>
+    <button onclick="window.app.navigateTo('screen-campaigns')" class="flex flex-col items-center gap-0.5 p-1 hover:text-indigo-600 text-slate-500 font-medium focus:outline-none">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      <span class="text-[10px]">Quảng cáo</span>
+    </button>
+    <button onclick="window.app.navigateTo('screen-creatives')" class="flex flex-col items-center gap-0.5 p-1 hover:text-indigo-600 text-slate-500 font-medium focus:outline-none">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+      <span class="text-[10px]">Nội dung</span>
+    </button>
+    <button onclick="window.app.navigateTo('screen-agent')" class="flex flex-col items-center gap-0.5 p-1 hover:text-indigo-600 text-purple-600 font-medium focus:outline-none">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      <span class="text-[10px]">AI Agent</span>
+    </button>
+    <button onclick="window.app.navigateTo('screen-settings')" class="flex flex-col items-center gap-0.5 p-1 hover:text-indigo-600 text-slate-500 font-medium focus:outline-none">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+      <span class="text-[10px]">Cài đặt</span>
+    </button>
+  </nav>
 
   <!-- ========================================================================= -->
   <!-- MODAL: REAL META ADS CONNECT DIALOG -->

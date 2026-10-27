@@ -345,8 +345,9 @@
       // Initial navigation
       this.navigateTo(this.currentScreenId);
 
-      // Render workspace info
+      // Render workspace info & Autopilot tier banner
       this.updateWorkspaceHeader();
+      this.updateAutopilotTierUI(this.autopilotManager.getMode());
     }
 
     applyUIMode(mode) {
@@ -357,6 +358,19 @@
       const proBtn = document.getElementById('toggleProModeBtn');
       const proSidebar = document.getElementById('proSidebarSection');
 
+      // Command Center Elements
+      const healthCard = document.getElementById('cmd-card-health');
+      const creativeSpotlight = document.getElementById('cmdCreativeSpotlight');
+      const exportExcelBtn = document.getElementById('headerExportExcelBtn');
+      const kpiGrid = document.getElementById('cmdKpiGrid');
+      
+      const labelRev = document.getElementById('label-kpi-revenue');
+      const subRev = document.getElementById('sub-kpi-revenue');
+      const labelSpend = document.getElementById('label-kpi-spend');
+      const subSpend = document.getElementById('sub-kpi-spend');
+      const labelProfit = document.getElementById('label-kpi-profit');
+      const subProfit = document.getElementById('sub-kpi-profit');
+
       if (mode === 'pro') {
         if (proSidebar) proSidebar.classList.remove('hidden');
         if (simpleBtn) {
@@ -365,6 +379,20 @@
         if (proBtn) {
           proBtn.className = "px-3 py-1 font-bold rounded-lg transition bg-indigo-600 text-white shadow-xs";
         }
+
+        // Pro Mode: Hiện đầy đủ tính năng & thuật ngữ chuyên sâu
+        if (healthCard) healthCard.classList.remove('hidden');
+        if (creativeSpotlight) creativeSpotlight.classList.remove('hidden');
+        if (exportExcelBtn) exportExcelBtn.classList.remove('hidden');
+        if (kpiGrid) kpiGrid.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs";
+
+        if (labelRev) labelRev.textContent = "Doanh thu (Revenue)";
+        if (subRev) subRev.textContent = "Conversion Value từ Pixel & CAPI";
+        if (labelSpend) labelSpend.textContent = "Ads Spend";
+        if (subSpend) subSpend.textContent = "Phân bổ đều theo phễu chuyển đổi";
+        if (labelProfit) labelProfit.textContent = "Lãi ước tính sau Ads";
+        if (subProfit) subProfit.textContent = "Đã trừ giá vốn 45% & phí sàn";
+
       } else {
         if (proSidebar) proSidebar.classList.add('hidden');
         if (simpleBtn) {
@@ -373,6 +401,19 @@
         if (proBtn) {
           proBtn.className = "px-3 py-1 font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
         }
+
+        // Simple Mode: Ẩn các yếu tố phức tạp, chỉ tập trung vào 3 số cốt lõi: Tiền bán - Tiền chi - Tiền lời
+        if (healthCard) healthCard.classList.add('hidden');
+        if (creativeSpotlight) creativeSpotlight.classList.add('hidden');
+        if (exportExcelBtn) exportExcelBtn.classList.add('hidden');
+        if (kpiGrid) kpiGrid.className = "grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs";
+
+        if (labelRev) labelRev.textContent = "💰 Tiền bán được";
+        if (subRev) subRev.textContent = "Tổng tiền hàng bán ra từ quảng cáo";
+        if (labelSpend) labelSpend.textContent = "💸 Tiền quảng cáo đã chi";
+        if (subSpend) subSpend.textContent = "Tiền đã trả cho Facebook & TikTok";
+        if (labelProfit) labelProfit.textContent = "✨ Tiền lời thực tế";
+        if (subProfit) subProfit.textContent = "Đã trừ vốn nhập 45% & phí ship/sàn";
       }
     }
 
@@ -616,6 +657,39 @@
       });
       const badge = document.getElementById('agentActiveBadge');
       if (badge) badge.textContent = `${tier} MODE`;
+
+      // Cập nhật Banner trên cùng & nút Kill Switch tương ứng
+      const killBtn = document.getElementById('bannerKillSwitchBtn');
+      const bannerBadgeText = document.getElementById('bannerBadgeText');
+      const bannerModeText = document.getElementById('bannerModeText');
+      const liveBanner = document.getElementById('liveStatusBanner');
+
+      if (tier === 'AUTOPILOT') {
+        if (killBtn) {
+          killBtn.classList.remove('hidden');
+          killBtn.classList.add('inline-flex');
+        }
+        if (bannerBadgeText) bannerBadgeText.textContent = "⚡ FULL AUTOPILOT ACTIVE";
+        if (bannerModeText) bannerModeText.textContent = "AI đang tự động tối ưu quảng cáo trong trần an toàn (≤ 500k/ngày, ±15% ngân sách).";
+        if (liveBanner) liveBanner.className = "bg-rose-500/10 text-rose-900 border-b border-rose-200 px-4 py-2 text-xs flex items-center justify-between shrink-0 no-print transition-colors";
+      } else if (tier === 'ASSISTED') {
+        if (killBtn) {
+          killBtn.classList.remove('hidden');
+          killBtn.classList.add('inline-flex');
+        }
+        if (bannerBadgeText) bannerBadgeText.textContent = "🛡️ ASSISTED AUTOPILOT";
+        if (bannerModeText) bannerModeText.textContent = "AI đề xuất các hành động tối ưu — Bạn bấm 1 chạm để duyệt.";
+        if (liveBanner) liveBanner.className = "bg-indigo-500/10 text-indigo-900 border-b border-indigo-200 px-4 py-2 text-xs flex items-center justify-between shrink-0 no-print transition-colors";
+      } else {
+        // COPILOT / DEMO Mode
+        if (killBtn) {
+          killBtn.classList.add('hidden');
+          killBtn.classList.remove('inline-flex');
+        }
+        if (bannerBadgeText) bannerBadgeText.textContent = "CHẾ ĐỘ AN TOÀN (COPILOT)";
+        if (bannerModeText) bannerModeText.textContent = "AI chỉ đóng vai trò cố vấn, không tự ý can thiệp ngân sách. Hoàn toàn an toàn cho người mới.";
+        if (liveBanner) liveBanner.className = "bg-amber-500/10 text-amber-900 border-b border-amber-200 px-4 py-2 text-xs flex items-center justify-between shrink-0 no-print transition-colors";
+      }
     }
 
     // ------------------------------------------------------------------------
@@ -1294,8 +1368,24 @@
     }
   };
 
+  // Toggle KPI Explanation (Tap-to-expand)
+  window.toggleKpiExplanation = function(explainId) {
+    const box = document.getElementById(explainId);
+    if (!box) return;
+    const isExpanded = box.classList.contains('expanded');
+    // Close other explain boxes first
+    document.querySelectorAll('.kpi-explain-box').forEach(b => b.classList.remove('expanded'));
+    if (!isExpanded) {
+      box.classList.add('expanded');
+    }
+  };
+
   // 2. Command Center: Submit Command
   window.submitCommandCenter = function() {
+    // Tự động đóng banner hướng dẫn người mới nếu đang mở
+    const welcomeCard = document.getElementById('newbieWelcomeCard');
+    if (welcomeCard) welcomeCard.classList.add('hidden');
+
     const input = document.getElementById('cmdInputHero');
     if (!input) return;
     const text = input.value.trim();
