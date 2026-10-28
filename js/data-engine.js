@@ -344,17 +344,64 @@
     }
 
     /**
+     * Fetch all available ad accounts for the current token
+     */
+    async fetchAdAccounts(token) {
+      const tok = (token || '').trim();
+      if (!tok) return { success: false, error: 'Vui lòng dán Access Token trước khi tìm tài khoản.' };
+      const url = `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_id,account_status,currency,timezone_name,amount_spent&limit=50&access_token=${encodeURIComponent(tok)}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) {
+          let msg = data.error.message || 'Lỗi khi gọi Meta Graph API.';
+          if (data.error.code === 190) {
+            msg = 'Mã Token đã hết hạn hoặc không hợp lệ. Vui lòng tạo lại mã mới trên Graph API Explorer.';
+          } else if (data.error.code === 200 || data.error.code === 10) {
+            msg = 'Token thiếu quyền đọc tài khoản quảng cáo. Bạn hãy tạo lại Token và nhớ tick chọn quyền "ads_read".';
+          }
+          throw new Error(msg);
+        }
+        const accounts = data.data || [];
+        return {
+          success: true,
+          accounts: accounts.map(a => ({
+            id: a.id, // e.g. act_123456
+            name: a.name || a.id,
+            accountId: a.account_id,
+            currency: a.currency || 'VND',
+            timezone: a.timezone_name || 'Asia/Ho_Chi_Minh',
+            status: a.account_status === 1 ? 'ACTIVE' : 'INACTIVE'
+          }))
+        };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    }
+
+    /**
      * Test connection to Meta Graph API
      */
     async testConnection(token, accountId) {
       const acc = (accountId || '').trim().startsWith('act_') ? accountId.trim() : 'act_' + accountId.trim();
+      if (!accountId || acc === 'act_') {
+        return { success: false, error: 'Chưa nhập Ad Account ID. Hãy bấm nút "Tự tìm tài khoản" để chọn tài khoản của bạn.' };
+      }
       const url = `https://graph.facebook.com/v19.0/${acc}?fields=name,account_status,currency,timezone_name,amount_spent&access_token=${encodeURIComponent(token)}`;
 
       try {
         const res = await fetch(url);
         const data = await res.json();
         if (data.error) {
-          throw new Error(data.error.message || 'Meta API returned an error.');
+          let errDetail = data.error.message || 'Meta API returned an error.';
+          if (data.error.code === 190) {
+            errDetail = 'Mã Token đã hết hạn hoặc không hợp lệ. Vui lòng tạo lại mã mới trên Graph API Explorer.';
+          } else if (data.error.code === 100 && (errDetail.includes('nonexisting') || errDetail.includes('node type'))) {
+            errDetail = `ID tài khoản "${acc}" không tồn tại hoặc bạn không có quyền truy cập. Hãy dùng nút "Tự tìm tài khoản" để chọn đúng tài khoản của bạn.`;
+          } else if (data.error.code === 273 || data.error.code === 200) {
+            errDetail = `Bạn chưa được cấp quyền trên tài khoản này hoặc Token thiếu quyền "ads_read".`;
+          }
+          throw new Error(errDetail);
         }
         return {
           success: true,

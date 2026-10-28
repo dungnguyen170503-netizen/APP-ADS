@@ -2217,18 +2217,26 @@
         <button onclick="document.getElementById('metaConnectModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
       </div>
 
-      <p class="text-slate-600">Nhập <strong>User Access Token</strong> (quyền <code>ads_read</code>) và <strong>Ad Account ID</strong> từ Meta for Developers để tải dữ liệu chiến dịch thật.</p>
+      <p class="text-slate-600">Dán <strong>User Access Token</strong> (quyền <code>ads_read</code>) từ Graph API Explorer. Bạn có thể bấm <strong>"Tự tìm tài khoản"</strong> để app tự động quét và điền tài khoản của bạn.</p>
 
       <div class="space-y-3">
         <div>
           <label class="font-bold text-slate-700 block mb-1">Meta User Access Token</label>
-          <input id="metaInputToken" type="password" placeholder="EAABw..." class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
-          <span class="text-[10px] text-slate-400 mt-1 block">Lấy token tại: <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="text-blue-600 hover:underline">Meta Graph API Explorer</a></span>
+          <div class="flex gap-2">
+            <input id="metaInputToken" type="password" placeholder="Dán mã EAABw... vào đây" class="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs" />
+            <button type="button" onclick="window.fetchMyAdAccounts()" class="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl text-xs whitespace-nowrap transition border border-blue-200 flex items-center gap-1.5 shadow-2xs">
+              🔍 Tự tìm tài khoản
+            </button>
+          </div>
+          <span class="text-[10px] text-slate-400 mt-1 block">Lấy token tại: <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="text-blue-600 hover:underline">Meta Graph API Explorer</a> (Cần tick quyền <code>ads_read</code>)</span>
         </div>
 
         <div>
-          <label class="font-bold text-slate-700 block mb-1">Ad Account ID</label>
-          <input id="metaInputAccId" type="text" placeholder="act_1234567890" value="act_1029384756" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+          <label class="font-bold text-slate-700 block mb-1">Tài khoản Quảng cáo (Ad Account)</label>
+          <select id="metaSelectAccId" onchange="window.onSelectAdAccount(this.value)" class="hidden w-full mb-2 border border-blue-300 bg-blue-50/50 rounded-xl px-3.5 py-2.5 outline-none font-semibold text-slate-800 text-xs">
+          </select>
+          <input id="metaInputAccId" type="text" placeholder="Ví dụ: act_1234567890 (hoặc bấm nút 'Tự tìm tài khoản' phía trên)" value="" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs" />
+          <span class="text-[10px] text-slate-400 mt-1 block">Lưu ý: Không dùng ID mẫu <code>act_1029384756</code> mà phải dùng đúng ID tài khoản ads của bạn.</span>
         </div>
       </div>
 
@@ -2674,7 +2682,16 @@
 
     // Modal Helpers
     window.openMetaConnectModal = function() {
-      document.getElementById('metaConnectModal').classList.remove('hidden');
+      const modal = document.getElementById('metaConnectModal');
+      modal.classList.remove('hidden');
+      const savedTok = localStorage.getItem('ntd_meta_token');
+      const savedAcc = localStorage.getItem('ntd_meta_acc_id');
+      if (savedTok && !document.getElementById('metaInputToken').value) {
+        document.getElementById('metaInputToken').value = savedTok;
+      }
+      if (savedAcc && !document.getElementById('metaInputAccId').value) {
+        document.getElementById('metaInputAccId').value = savedAcc;
+      }
     };
 
     window.openTikTokConnectModal = function() {
@@ -2704,6 +2721,59 @@
       window.app.refreshCurrentScreen();
     };
 
+    // Auto-fetch ad accounts for User Token
+    window.fetchMyAdAccounts = async function() {
+      const token = document.getElementById('metaInputToken').value.trim();
+      const resBox = document.getElementById('metaTestResultBox');
+      const selectBox = document.getElementById('metaSelectAccId');
+      const inputAcc = document.getElementById('metaInputAccId');
+      
+      resBox.classList.remove('hidden');
+
+      if (!token) {
+        resBox.className = "p-3 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 block";
+        resBox.innerHTML = `⚠️ <strong>Vui lòng dán Access Token trước:</strong> Sau đó bấm nút "Tự tìm tài khoản" để hệ thống tự động quét danh sách tài khoản của bạn.`;
+        return;
+      }
+
+      resBox.className = "p-3 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 block animate-pulse";
+      resBox.innerHTML = `⏳ <strong>Đang kết nối Facebook...</strong> Đang quét các tài khoản quảng cáo mà Token này có quyền quản lý...`;
+
+      const res = await window.app.dataEngine.metaProvider.fetchAdAccounts(token);
+      if (res.success) {
+        if (!res.accounts || res.accounts.length === 0) {
+          resBox.className = "p-3 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 block";
+          resBox.innerHTML = `⚠️ <strong>Token hợp lệ nhưng chưa tìm thấy tài khoản quảng cáo:</strong><br>• Tài khoản cá nhân của bạn có thể chưa từng tạo chiến dịch nào.<br>• Hoặc nếu bạn dùng tài khoản Doanh nghiệp (BM), hãy chắc chắn rằng bạn đã thêm tài sản (Ad Account) vào người dùng này.<br>• Bạn vẫn có thể tự gõ thẳng ID dạng <code>act_xxxxxxxxx</code> vào ô bên dưới nếu bạn biết ID.`;
+          return;
+        }
+
+        selectBox.innerHTML = '<option value="">-- Chọn tài khoản quảng cáo của bạn --</option>';
+        res.accounts.forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = acc.id;
+          opt.textContent = `${acc.name} (${acc.id}) • ${acc.currency} • ${acc.status}`;
+          selectBox.appendChild(opt);
+        });
+        selectBox.classList.remove('hidden');
+
+        // Auto select the first account
+        selectBox.value = res.accounts[0].id;
+        inputAcc.value = res.accounts[0].id;
+
+        resBox.className = "p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 block";
+        resBox.innerHTML = `✅ <strong>Tìm thấy ${res.accounts.length} tài khoản quảng cáo!</strong><br>Đã tự động chọn: <strong>${res.accounts[0].name}</strong> (<code>${res.accounts[0].id}</code>).<br>👉 Bây giờ bạn có thể bấm <strong>"Kiểm tra kết nối"</strong> hoặc <strong>"Đồng bộ Dữ liệu Thật"</strong> ngay bên dưới.`;
+      } else {
+        resBox.className = "p-3 rounded-xl bg-rose-50 text-rose-900 border border-rose-200 block";
+        resBox.innerHTML = `❌ <strong>Lỗi khi tìm tài khoản:</strong> ${res.error}`;
+      }
+    };
+
+    window.onSelectAdAccount = function(val) {
+      if (val) {
+        document.getElementById('metaInputAccId').value = val;
+      }
+    };
+
     // Real Meta Connection Testing
     window.testMetaConnection = async function() {
       const token = document.getElementById('metaInputToken').value.trim();
@@ -2713,17 +2783,25 @@
 
       if (!token) {
         resBox.className = "p-3 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 block";
-        resBox.innerHTML = `⚠️ <strong>Chưa có Token:</strong> Bạn có thể tạo token thử nghiệm tại Meta Graph API Explorer, hoặc tiếp tục dùng Demo Data đã được xác thực 100%.`;
+        resBox.innerHTML = `⚠️ <strong>Chưa có Token:</strong> Vui lòng dán mã Access Token từ Graph API Explorer.`;
+        return;
+      }
+
+      if (!acc) {
+        resBox.className = "p-3 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 block";
+        resBox.innerHTML = `⚠️ <strong>Chưa có Ad Account ID:</strong> Vui lòng bấm nút <strong>"🔍 Tự tìm tài khoản"</strong> phía trên hoặc nhập ID dạng <code>act_xxxx</code>.`;
         return;
       }
 
       resBox.className = "p-3 rounded-xl bg-slate-100 text-slate-700 block animate-pulse";
-      resBox.textContent = "Đang gọi Meta Graph API v19.0...";
+      resBox.textContent = "Đang xác thực với Meta Graph API v19.0...";
 
       const res = await window.app.dataEngine.metaProvider.testConnection(token, acc);
       if (res.success) {
         resBox.className = "p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 block";
-        resBox.innerHTML = `✅ <strong>Kết nối thành công!</strong> Tài khoản: <strong>${res.accountName}</strong> (${res.currency}) • Múi giờ: ${res.timezone}.`;
+        resBox.innerHTML = `✅ <strong>Kết nối thành công!</strong> Tài khoản: <strong>${res.accountName}</strong> (${res.currency}) • Múi giờ: ${res.timezone}.<br>👉 Hãy bấm <strong>"Đồng bộ Dữ liệu Thật"</strong> để tải các chiến dịch về app!`;
+        localStorage.setItem('ntd_meta_token', token);
+        localStorage.setItem('ntd_meta_acc_id', acc);
       } else {
         resBox.className = "p-3 rounded-xl bg-rose-50 text-rose-900 border border-rose-200 block";
         resBox.innerHTML = `❌ <strong>Lỗi kết nối:</strong> ${res.error}`;
@@ -2735,12 +2813,19 @@
       const acc = document.getElementById('metaInputAccId').value.trim();
       
       if (!token) {
-        alert('Vui lòng nhập Token hoặc dùng Demo Mode.');
+        alert('Vui lòng dán Token trước.');
+        return;
+      }
+
+      if (!acc) {
+        alert('Vui lòng chọn hoặc nhập Ad Account ID.');
         return;
       }
 
       try {
         const syncRes = await window.app.dataEngine.metaProvider.syncLive(token, acc);
+        localStorage.setItem('ntd_meta_token', token);
+        localStorage.setItem('ntd_meta_acc_id', acc);
         alert(`✅ Đã đồng bộ thành công ${syncRes.campaignsCount} chiến dịch từ Meta Ads!`);
         document.getElementById('metaConnectModal').classList.add('hidden');
         window.setAppMode('live');
