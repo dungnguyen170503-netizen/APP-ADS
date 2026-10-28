@@ -2142,16 +2142,19 @@
   };
 
   window.simulateOAuthConnect = function(platform) {
-    const pName = platform === 'meta' ? 'Meta Ads' : 'TikTok Ads';
-    const accName = platform === 'meta' ? 'Kstudy Fashion Official' : 'Kstudy Shop Vietnam';
-    
-    // Simulate instantaneous authorization
-    alert(`🔐 Đang xác thực OAuth 2.0 với ${pName}...\n✓ Đã cấp quyền: ads_read, ads_management\n✓ Đã liên kết tài khoản: ${accName}\n=> Kết nối thành công 100%!`);
-    
-    window.app.dataEngine.setOAuthState(platform, { connected: true, accountName: accName, lastSynced: 'Vừa xong' });
     const modal = document.getElementById('oauthModal');
     if (modal) modal.classList.add('hidden');
-    window.app.refreshCurrentScreen();
+    
+    // Direct user to real token configuration dialog instead of mock alert
+    if (platform === 'meta') {
+      if (typeof window.openMetaConnectModal === 'function') {
+        window.openMetaConnectModal();
+      }
+    } else {
+      if (typeof window.openTikTokConnectModal === 'function') {
+        window.openTikTokConnectModal();
+      }
+    }
   };
 
   // 13. Smart Jargon Glossary Modal

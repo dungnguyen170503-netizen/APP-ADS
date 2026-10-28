@@ -2460,8 +2460,8 @@
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 text-xs">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
         <div>
-          <h3 class="font-black text-sm sm:text-base text-slate-900">Kết nối Tài khoản Quảng cáo</h3>
-          <p class="text-[11px] text-slate-400">Kết nối 1-click tự động qua OAuth — Không cần nhập Token phức tạp</p>
+          <h3 class="font-black text-sm sm:text-base text-slate-900">Kết Nối Tài Khoản Quảng Cáo Thật</h3>
+          <p class="text-[11px] text-slate-400">Kết nối trực tiếp với Meta Graph API v19.0 & TikTok Marketing API v1.3</p>
         </div>
         <button onclick="document.getElementById('oauthModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
       </div>
@@ -2473,15 +2473,15 @@
             <span class="w-9 h-9 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">f</span>
             <div>
               <h4 class="font-bold text-slate-900">Meta Ads (Facebook & Instagram)</h4>
-              <span id="oauthMetaStatus" class="text-[10px] text-emerald-600 font-bold">🟢 Đã kết nối: Kstudy Fashion Official</span>
+              <span id="oauthMetaStatus" class="text-[10px] text-emerald-600 font-bold">🟢 Sẵn sàng liên kết Graph API v19.0</span>
             </div>
           </div>
-          <button onclick="window.simulateOAuthConnect('meta')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-xs">
-            Đổi tài khoản
+          <button onclick="document.getElementById('oauthModal').classList.add('hidden'); window.openMetaConnectModal();" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-xs flex items-center gap-1">
+            🔗 Cài Token Thật
           </button>
         </div>
         <div class="text-[11px] text-slate-500">
-          Tài khoản ID: <code class="font-mono text-slate-800">act_1029384756</code> • Quyền: <code>ads_read, ads_management</code>
+          Hỗ trợ: Quét tự động tài khoản quảng cáo của bạn qua Access Token • Quyền: <code>ads_read</code>
         </div>
       </div>
 
@@ -2492,23 +2492,21 @@
             <span class="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-xs">🎵</span>
             <div>
               <h4 class="font-bold text-slate-900">TikTok Ads (TikTok for Business)</h4>
-              <span id="oauthTikTokStatus" class="text-[10px] text-emerald-600 font-bold">🟢 Đã kết nối: Kstudy Shop Vietnam</span>
+              <span id="oauthTikTokStatus" class="text-[10px] text-emerald-600 font-bold">🟢 Sẵn sàng liên kết Marketing API v1.3</span>
             </div>
           </div>
-          <button onclick="window.simulateOAuthConnect('tiktok')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition shadow-xs">
-            Đổi tài khoản
+          <button onclick="document.getElementById('oauthModal').classList.add('hidden'); window.openTikTokConnectModal();" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition shadow-xs flex items-center gap-1">
+            🔗 Cài Token Thật
           </button>
         </div>
         <div class="text-[11px] text-slate-500">
-          Advertiser ID: <code class="font-mono text-slate-800">7298374829103</code> • Đồng bộ: <code>Insights 30D</code>
+          Đồng bộ: TikTok Shop GMV, ROAS, Spark Ads • Cần: <code>Access Token & Advertiser ID</code>
         </div>
       </div>
 
-      <!-- Pro Mode Manual Token Option -->
-      <div class="pt-2 text-center border-t border-slate-100">
-        <button onclick="document.getElementById('oauthModal').classList.add('hidden'); window.openMetaConnectModal();" class="text-[11px] text-slate-500 hover:text-indigo-600 font-semibold underline">
-          Cần dán Access Token v19.0 thủ công? Mở cấu hình Pro API →
-        </button>
+      <!-- Help Tip -->
+      <div class="p-3 bg-blue-50/60 rounded-xl text-[11px] text-blue-900 border border-blue-100">
+        💡 <strong>Mẹo:</strong> Bấm nút <strong>"🔗 Cài Token Thật"</strong> ở trên, dán mã Access Token từ Meta Developers rồi bấm <strong>"🔍 Tự tìm tài khoản"</strong> để app tự kéo danh sách ads của bạn!
       </div>
     </div>
   </div>
