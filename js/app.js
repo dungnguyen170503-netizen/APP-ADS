@@ -9,6 +9,10 @@
 (function (window) {
   'use strict';
 
+  // Safe HTML Escaping & URL sanitization for XSS Defense
+  const esc = window.escapeHtml || ((s) => (s == null ? '' : String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]))));
+  const safeUrl = window.sanitizeUrl || ((u) => (/^(https?:|data:image\/)/i.test(String(u || '').trim()) ? String(u).trim() : 'about:blank'));
+
   // --------------------------------------------------------------------------
   // 1. STATE STORE (Persistence via LocalStorage)
   // --------------------------------------------------------------------------
@@ -652,16 +656,16 @@
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-xs transition space-y-3">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="flex items-start sm:items-center gap-3">
-                <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor} shrink-0">${rule.badge}</span>
+                <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor} shrink-0">${esc(rule.badge)}</span>
                 <div>
-                  <h5 class="font-bold text-sm text-slate-900">${rule.name}</h5>
-                  <p class="text-xs text-slate-500 italic">“${rule.naturalText}”</p>
+                  <h5 class="font-bold text-sm text-slate-900">${esc(rule.name)}</h5>
+                  <p class="text-xs text-slate-500 italic">“${esc(rule.naturalText)}”</p>
                 </div>
               </div>
               <div class="flex items-center gap-3 shrink-0">
-                <span class="text-[11px] text-slate-400 font-mono">Chu kỳ: ${rule.checkFrequency}</span>
+                <span class="text-[11px] text-slate-400 font-mono">Chu kỳ: ${esc(rule.checkFrequency)}</span>
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="window.toggleAutomationRule('${rule.id}')" class="sr-only peer">
+                  <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="window.toggleAutomationRule('${esc(rule.id)}')" class="sr-only peer">
                   <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                 </label>
               </div>
@@ -701,14 +705,14 @@
 
       tbody.innerHTML = logs.map(l => `
         <tr class="hover:bg-slate-50/80 transition">
-          <td class="py-3 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">${l.timestamp}</td>
+          <td class="py-3 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">${esc(l.timestamp)}</td>
           <td class="py-3 px-4">
-            <span class="inline-flex items-center gap-1 font-bold ${l.agent.includes('Autopilot') ? 'text-purple-600' : 'text-indigo-600'}">
-              <span>🤖</span> <span>${l.agent}</span>
+            <span class="inline-flex items-center gap-1 font-bold ${l.agent && l.agent.includes('Autopilot') ? 'text-purple-600' : 'text-indigo-600'}">
+              <span>🤖</span> <span>${esc(l.agent)}</span>
             </span>
           </td>
-          <td class="py-3 px-4 font-bold text-slate-900">${l.title}</td>
-          <td class="py-3 px-4 text-slate-500 text-[11px] max-w-xs truncate" title="${l.description}">${l.description}</td>
+          <td class="py-3 px-4 font-bold text-slate-900">${esc(l.title)}</td>
+          <td class="py-3 px-4 text-slate-500 text-[11px] max-w-xs truncate" title="${esc(l.description)}">${esc(l.description)}</td>
           <td class="py-3 px-4 whitespace-nowrap">
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${l.userApproved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
               ${l.userApproved ? '✓ Đã duyệt' : 'Tự động'}
@@ -716,7 +720,7 @@
           </td>
           <td class="py-3 px-4 text-center whitespace-nowrap">
             ${l.canUndo ? `
-              <button onclick="window.undoAction('${l.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg transition border border-slate-200">
+              <button onclick="window.undoAction('${esc(l.id)}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg transition border border-slate-200">
                 ↩️ Hoàn tác
               </button>
             ` : `
@@ -854,13 +858,13 @@
           : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">Paused</span>`;
 
         return `
-          <tr class="hover:bg-slate-50/80 transition cursor-pointer border-b border-slate-100" onclick="window.app.openCampaignDetail('${c.id}')">
+          <tr class="hover:bg-slate-50/80 transition cursor-pointer border-b border-slate-100" onclick="window.app.openCampaignDetail('${esc(c.id)}')">
             <td class="py-3 px-4">
               <div class="font-bold text-slate-900 hover:text-indigo-600 transition flex items-center gap-2">
-                <span>${c.name}</span>
-                <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono">${c.id}</span>
+                <span>${esc(c.name)}</span>
+                <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono">${esc(c.id)}</span>
               </div>
-              <div class="text-[11px] text-slate-400 mt-0.5">Mục tiêu: <span class="font-medium text-slate-600">${c.objective}</span> • Ngân sách: ${window.AdsAI.MetricsCalc.formatVND(c.budget)}/ngày</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Mục tiêu: <span class="font-medium text-slate-600">${esc(c.objective)}</span> • Ngân sách: ${window.AdsAI.MetricsCalc.formatVND(c.budget)}/ngày</div>
             </td>
             <td class="py-3 px-3">${platBadge}</td>
             <td class="py-3 px-3">${statusBadge}</td>
@@ -964,12 +968,12 @@
       tbody.innerHTML = adSets.map(s => `
         <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
           <td class="py-3 px-4">
-            <div class="font-bold text-slate-900">${s.name}</div>
-            <div class="text-[11px] text-slate-400">Khán giả: <span class="text-slate-600 font-medium">${s.audience}</span></div>
+            <div class="font-bold text-slate-900">${esc(s.name)}</div>
+            <div class="text-[11px] text-slate-400">Khán giả: <span class="text-slate-600 font-medium">${esc(s.audience)}</span></div>
           </td>
           <td class="py-3 px-3">
             <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${s.platform === 'meta' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">
-              ${s.platform.toUpperCase()}
+              ${esc(s.platform.toUpperCase())}
             </span>
           </td>
           <td class="py-3 px-3 text-right font-medium text-slate-800">${window.AdsAI.MetricsCalc.formatVND(s.budget)}</td>
@@ -980,7 +984,7 @@
           <td class="py-3 px-3 text-right font-bold">${window.AdsAI.MetricsCalc.formatNumber(s.metrics.conversions)}</td>
           <td class="py-3 px-3 text-center">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${s.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
-              ${s.status}
+              ${esc(s.status)}
             </span>
           </td>
         </tr>
@@ -998,12 +1002,12 @@
       tbody.innerHTML = ads.map(a => `
         <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
           <td class="py-3 px-4">
-            <div class="font-bold text-slate-900">${a.name}</div>
-            <div class="text-[11px] text-slate-400">ID: ${a.id} • AdSet: ${a.adSetId}</div>
+            <div class="font-bold text-slate-900">${esc(a.name)}</div>
+            <div class="text-[11px] text-slate-400">ID: ${esc(a.id)} • AdSet: ${esc(a.adSetId)}</div>
           </td>
           <td class="py-3 px-3">
             <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${a.platform === 'meta' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">
-              ${a.platform.toUpperCase()}
+              ${esc(a.platform.toUpperCase())}
             </span>
           </td>
           <td class="py-3 px-3 text-right font-bold text-slate-900">${window.AdsAI.MetricsCalc.formatVND(a.metrics.spend)}</td>
@@ -1014,7 +1018,7 @@
           <td class="py-3 px-3 text-right font-bold">${window.AdsAI.MetricsCalc.formatNumber(a.metrics.conversions)}</td>
           <td class="py-3 px-3 text-center">
             <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${a.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
-              ${a.status}
+              ${esc(a.status)}
             </span>
           </td>
         </tr>
@@ -1039,19 +1043,19 @@
           else if (cr.status === 'WATCH') badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
 
           return `
-            <div class="bg-white rounded-2xl border ${cr.status === 'FATIGUE' ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'} overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer" onclick="window.app.openCreativeDetail('${cr.id}')">
+            <div class="bg-white rounded-2xl border ${cr.status === 'FATIGUE' ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'} overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer" onclick="window.app.openCreativeDetail('${esc(cr.id)}')">
               <div>
                 <div class="relative h-44 bg-slate-900 overflow-hidden">
-                  <img src="${cr.url}" alt="${cr.name}" class="w-full h-full object-cover opacity-90 hover:scale-105 transition duration-300" />
+                  <img src="${safeUrl(cr.url)}" alt="${esc(cr.name)}" class="w-full h-full object-cover opacity-90 hover:scale-105 transition duration-300" />
                   <div class="absolute top-3 left-3 flex gap-2">
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${cr.platform === 'meta' ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}">${cr.platform.toUpperCase()}</span>
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${badgeColor}">${cr.status}</span>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${cr.platform === 'meta' ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}">${esc(cr.platform.toUpperCase())}</span>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${badgeColor}">${esc(cr.status)}</span>
                   </div>
-                  <div class="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded text-[10px] font-mono">${cr.format}</div>
+                  <div class="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded text-[10px] font-mono">${esc(cr.format)}</div>
                 </div>
                 <div class="p-4 space-y-2">
-                  <h4 class="font-bold text-xs text-slate-900 line-clamp-2">${cr.name}</h4>
-                  <p class="text-[11px] text-slate-500 italic">"${cr.headline}"</p>
+                  <h4 class="font-bold text-xs text-slate-900 line-clamp-2">${esc(cr.name)}</h4>
+                  <p class="text-[11px] text-slate-500 italic">"${esc(cr.headline)}"</p>
                   <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
                     <div>
                       <span class="text-[10px] text-slate-400 block">Hook Rate (3s)</span>
@@ -1159,7 +1163,7 @@
           <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center space-y-4 animate-pulse">
             <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 mx-auto flex items-center justify-center text-xl font-bold">🪄</div>
             <div>
-              <h4 class="font-bold text-slate-800 text-sm">AI đang bóc tách góc nhìn & chấm điểm Hook cho "${product}"</h4>
+              <h4 class="font-bold text-slate-800 text-sm">AI đang bóc tách góc nhìn & chấm điểm Hook cho "${esc(product)}"</h4>
               <p class="text-xs text-slate-500 max-w-md mx-auto mt-1">Đang áp dụng công thức 3 giây đầu giữ chân người xem và cấu trúc chuyển đổi cao...</p>
             </div>
           </div>
@@ -1182,7 +1186,7 @@
         if (resultsArea) {
           resultsArea.innerHTML = `
             <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs">
-              ⚠️ Không thể tạo kịch bản lúc này: ${err.message}. Vui lòng thử lại.
+              ⚠️ Không thể tạo kịch bản lúc này: ${esc(err.message)}. Vui lòng thử lại.
             </div>
           `;
         }
@@ -1277,9 +1281,9 @@
               <span class="text-[10px] bg-white/20 text-purple-200 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                 ${data.isGemini ? '✨ Gemini 1.5 Flash' : '⚡ Smart Creative OS'}
               </span>
-              <span class="text-xs text-purple-200">Đã tạo cho: <strong>${data.product}</strong> (${isTikTok ? 'TikTok Ads' : 'Meta Ads'})</span>
+              <span class="text-xs text-purple-200">Đã tạo cho: <strong>${esc(data.product)}</strong> (${isTikTok ? 'TikTok Ads' : 'Meta Ads'})</span>
             </div>
-            <p class="text-xs text-purple-100 max-w-2xl">${data.summaryAdvice}</p>
+            <p class="text-xs text-purple-100 max-w-2xl">${esc(data.summaryAdvice)}</p>
           </div>
           <div class="bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 text-center shrink-0">
             <span class="text-[10px] font-bold text-purple-200 uppercase tracking-wider block">Hook Score trung bình</span>
@@ -1408,8 +1412,8 @@
       tbody.innerHTML = pivotList.map(p => `
         <tr class="hover:bg-slate-50 transition border-b border-slate-100">
           <td class="py-3 px-4 font-bold text-slate-900">
-            <div>${p.dimensionValue}</div>
-            ${p.subText ? `<span class="text-[10px] text-slate-400 font-mono">${p.subText}</span>` : ''}
+            <div>${esc(p.dimensionValue)}</div>
+            ${p.subText ? `<span class="text-[10px] text-slate-400 font-mono">${esc(p.subText)}</span>` : ''}
           </td>
           <td class="py-3 px-3 text-right font-bold text-slate-900">${window.AdsAI.MetricsCalc.formatVND(p.metrics.spend)}</td>
           <td class="py-3 px-3 text-right font-bold text-slate-900">${window.AdsAI.MetricsCalc.formatVND(p.metrics.revenue)}</td>
@@ -1441,13 +1445,13 @@
           issuesContainer.innerHTML = ctx.issues.map(iss => `
             <div class="p-4 rounded-xl border border-rose-200 bg-rose-50/60 space-y-2 text-xs">
               <div class="flex items-center justify-between">
-                <span class="font-bold text-rose-800 uppercase tracking-wider text-[10px]">${iss.type}</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-200 text-rose-900">${iss.platform.toUpperCase()}</span>
+                <span class="font-bold text-rose-800 uppercase tracking-wider text-[10px]">${esc(iss.type)}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-200 text-rose-900">${esc(iss.platform.toUpperCase())}</span>
               </div>
-              <h4 class="font-bold text-slate-900">${iss.title}</h4>
-              <p class="text-slate-700">${iss.description}</p>
+              <h4 class="font-bold text-slate-900">${esc(iss.title)}</h4>
+              <p class="text-slate-700">${esc(iss.description)}</p>
               <div class="p-2.5 bg-white rounded-lg border border-rose-100 text-[11px] text-slate-800">
-                <strong>[Khuyến nghị]:</strong> ${iss.recommendation}
+                <strong>[Khuyến nghị]:</strong> ${esc(iss.recommendation)}
               </div>
             </div>
           `).join('');
@@ -1463,13 +1467,13 @@
           oppContainer.innerHTML = ctx.opportunities.map(opp => `
             <div class="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 space-y-2 text-xs">
               <div class="flex items-center justify-between">
-                <span class="font-bold text-indigo-700 uppercase tracking-wider text-[10px]">${opp.type}</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-200 text-indigo-900">${opp.platform.toUpperCase()}</span>
+                <span class="font-bold text-indigo-700 uppercase tracking-wider text-[10px]">${esc(opp.type)}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-200 text-indigo-900">${esc(opp.platform.toUpperCase())}</span>
               </div>
-              <h4 class="font-bold text-slate-900">${opp.title}</h4>
-              <p class="text-slate-700">${opp.description}</p>
+              <h4 class="font-bold text-slate-900">${esc(opp.title)}</h4>
+              <p class="text-slate-700">${esc(opp.description)}</p>
               <div class="p-2.5 bg-white rounded-lg border border-indigo-100 text-[11px] text-slate-800">
-                <strong>[Khuyến nghị]:</strong> ${opp.recommendation}
+                <strong>[Khuyến nghị]:</strong> ${esc(opp.recommendation)}
               </div>
             </div>
           `).join('');
@@ -1493,7 +1497,7 @@
       userBubble.className = 'flex justify-end';
       userBubble.innerHTML = `
         <div class="max-w-xl bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-3 text-xs shadow-sm">
-          <p class="font-medium">${q}</p>
+          <p class="font-medium">${esc(q)}</p>
           <span class="text-[9px] text-indigo-200 block text-right mt-1">${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       `;
@@ -1527,26 +1531,26 @@
                 <span class="font-bold text-slate-900">Ads AI Copilot</span>
               </div>
               <div class="flex items-center gap-2 text-[10px]">
-                <span class="px-2 py-0.5 rounded-full font-bold ${ans.confidence === 'High' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">Độ tin cậy: ${ans.confidence}</span>
-                <span class="text-slate-400">${ans.timestamp}</span>
+                <span class="px-2 py-0.5 rounded-full font-bold ${ans.confidence === 'High' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">Độ tin cậy: ${esc(ans.confidence)}</span>
+                <span class="text-slate-400">${esc(ans.timestamp)}</span>
               </div>
             </div>
 
             <div class="space-y-2.5 leading-relaxed">
               <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">1. [FACT] DỮ LIỆU ĐO LƯỜNG</span>
-                <p class="text-slate-800 font-medium">${ans.fact}</p>
+                <p class="text-slate-800 font-medium">${esc(ans.fact)}</p>
               </div>
 
               <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">2. [HYPOTHESIS] NGUYÊN NHÂN GIẢ ĐỊNH</span>
-                <p class="text-slate-700">${ans.hypothesis}</p>
+                <p class="text-slate-700">${esc(ans.hypothesis)}</p>
               </div>
 
               <div class="bg-emerald-50/80 p-3 rounded-xl border border-emerald-200 text-emerald-950">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block mb-1">3. [RECOMMENDATION] KHUYẾN NGHỊ</span>
                 <ul class="list-disc list-inside space-y-1 font-medium text-emerald-900">
-                  ${ans.recommendations.map(r => `<li>${r}</li>`).join('')}
+                  ${(ans.recommendations || []).map(r => `<li>${esc(r)}</li>`).join('')}
                 </ul>
               </div>
             </div>
@@ -1755,7 +1759,7 @@
         const ansInput = document.getElementById('clarificationAnswerInput');
 
         if (clarBox && qText) {
-          qText.innerHTML = `<strong>🤖 AI Copilot:</strong> ${qRes.question}`;
+          qText.innerHTML = `<strong>🤖 AI Copilot:</strong> ${esc(qRes.question)}`;
           clarBox.classList.remove('hidden');
           if (ansInput) {
             ansInput.value = '';
@@ -1882,7 +1886,7 @@
     const qText = document.getElementById('clarificationQuestionText');
 
     if (res.status === 'NEED_CLARIFICATION') {
-      qText.innerHTML = `<strong>🤖 AI Copilot:</strong> ${res.question}`;
+      qText.innerHTML = `<strong>🤖 AI Copilot:</strong> ${esc(res.question)}`;
       ansInput.value = '';
       ansInput.focus();
     } else if (res.status === 'READY') {
@@ -1911,11 +1915,11 @@
       phasesList.innerHTML = plan.phases.map(p => `
         <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
           <div class="flex items-center justify-between">
-            <span class="font-extrabold text-[11px] text-indigo-700 uppercase tracking-wider">Giai đoạn ${p.phase} • ${p.name}</span>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'READY' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}">${p.status}</span>
+            <span class="font-extrabold text-[11px] text-indigo-700 uppercase tracking-wider">Giai đoạn ${p.phase} • ${esc(p.name)}</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'READY' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}">${esc(p.status)}</span>
           </div>
           <ul class="space-y-1 text-slate-600 text-[11px]">
-            ${p.items.map(it => `<li class="flex items-start gap-1.5"><span class="text-indigo-500 font-bold">•</span><span>${it}</span></li>`).join('')}
+            ${p.items.map(it => `<li class="flex items-start gap-1.5"><span class="text-indigo-500 font-bold">•</span><span>${esc(it)}</span></li>`).join('')}
           </ul>
         </div>
       `).join('');
@@ -1967,7 +1971,7 @@
       list.innerHTML = actions.map(act => `
         <div class="flex items-center gap-2">
           <span class="text-indigo-600 font-bold">✓</span>
-          <span>${act}</span>
+          <span>${esc(act)}</span>
         </div>
       `).join('');
     }
@@ -2434,9 +2438,9 @@ ${sc.psychologicalTrigger || 'Tập trung kích thích cảm xúc và giữ châ
       <div class="p-3 bg-white rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
         <div>
           <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.platform === 'meta' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">${m.platform.toUpperCase()}</span>
-            <strong class="text-slate-900">${m.entityName}</strong>
-            <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">${m.entityType}</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.platform === 'meta' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">${esc(m.platform.toUpperCase())}</span>
+            <strong class="text-slate-900">${esc(m.entityName)}</strong>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">${esc(m.entityType)}</span>
           </div>
           <div class="text-[11px] text-slate-500 mt-1">
             Chỉ số: Chi tiêu ${window.AdsAI.MetricsCalc.formatVND(m.metrics.spend)} • Đơn: ${m.metrics.conversions} • ROAS: ${m.metrics.roas} • CPA: ${window.AdsAI.MetricsCalc.formatVND(m.metrics.cpa)}
@@ -2445,7 +2449,7 @@ ${sc.psychologicalTrigger || 'Tập trung kích thích cảm xúc và giữ châ
         <div class="text-right shrink-0">
           <span class="inline-flex items-center gap-1 font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
             <span>➔ Dự kiến:</span>
-            <span>${m.actionLabel}</span>
+            <span>${esc(m.actionLabel)}</span>
           </span>
         </div>
       </div>
@@ -2532,7 +2536,7 @@ ${sc.psychologicalTrigger || 'Tập trung kích thích cảm xúc và giữ châ
     } catch (err) {
       console.error('Error generating variants:', err);
       if (listEl) {
-        listEl.innerHTML = `<div class="p-4 bg-rose-50 text-rose-800 text-xs rounded-xl">⚠️ Lỗi sinh biến thể: ${err.message}</div>`;
+        listEl.innerHTML = `<div class="p-4 bg-rose-50 text-rose-800 text-xs rounded-xl">⚠️ Lỗi sinh biến thể: ${esc(err.message)}</div>`;
       }
     }
   };
@@ -2547,27 +2551,27 @@ ${sc.psychologicalTrigger || 'Tập trung kích thích cảm xúc và giữ châ
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-extrabold flex items-center justify-center text-xs">${idx + 1}</span>
-              <strong class="text-slate-900 text-xs">${v.title}</strong>
+              <strong class="text-slate-900 text-xs">${esc(v.title)}</strong>
             </div>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">${v.badge || '✨ Đề xuất'}</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">${esc(v.badge || '✨ Đề xuất')}</span>
           </div>
 
           <div class="p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs text-slate-700">
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-400 block">Tiêu đề (Headline) mới:</span>
-              <strong class="text-slate-900">"${v.headline}"</strong>
+              <strong class="text-slate-900">"${esc(v.headline)}"</strong>
             </div>
             <div>
               <span class="text-[10px] uppercase font-bold text-indigo-500 block">🎬 Hành động 3s đầu (Visual):</span>
-              <p class="text-[11px] text-slate-600">${v.visualAction}</p>
+              <p class="text-[11px] text-slate-600">${esc(v.visualAction)}</p>
             </div>
             <div>
               <span class="text-[10px] uppercase font-bold text-purple-600 block">🎙️ Lời thoại / Audio Hook:</span>
-              <p class="text-[11px] text-purple-950 italic font-medium">${v.audioHook}</p>
+              <p class="text-[11px] text-purple-950 italic font-medium">${esc(v.audioHook)}</p>
             </div>
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-400 block">💡 Chiến thuật (Strategy):</span>
-              <p class="text-[11px] text-slate-500">${v.strategy}</p>
+              <p class="text-[11px] text-slate-500">${esc(v.strategy)}</p>
             </div>
           </div>
 

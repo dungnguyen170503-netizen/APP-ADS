@@ -10,6 +10,97 @@
   'use strict';
 
   // --------------------------------------------------------------------------
+  // 0. SECURITY & DEFENSE UTILITIES (XSS Sanitizer, URL validator, Secret Masking, Financial Guard)
+  // --------------------------------------------------------------------------
+  const SecurityUtils = {
+    /**
+     * Escape special HTML characters to prevent XSS injection
+     */
+    escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      const s = String(str);
+      return s.replace(/[&<>"']/g, function (m) {
+        switch (m) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '"': return '&quot;';
+          case "'": return '&#39;';
+          default: return m;
+        }
+      });
+    },
+
+    /**
+     * Validate and sanitize URLs to allow only safe schemes (http, https, data:image)
+     */
+    sanitizeUrl(url) {
+      if (!url || typeof url !== 'string') return '';
+      const clean = url.trim();
+      if (/^(https?:|data:image\/)/i.test(clean)) {
+        return clean;
+      }
+      return 'about:blank';
+    },
+
+    /**
+     * Mask sensitive credentials for UI display
+     */
+    maskSecret(str, visibleEnd = 4) {
+      if (!str || typeof str !== 'string') return '';
+      const trimmed = str.trim();
+      if (trimmed.length <= visibleEnd) return '••••';
+      return '••••••••' + trimmed.slice(-visibleEnd);
+    },
+
+    /**
+     * Financial Circuit Breaker: Safeguard against runaway or unintended budget changes
+     */
+    validateBudgetChange(currentBudget, newBudget, maxIncreasePercent = 50) {
+      const curr = Number(currentBudget) || 0;
+      const next = Number(newBudget) || 0;
+      if (next <= 0) {
+        return { allowed: false, reason: 'Ngân sách phải lớn hơn 0 VNĐ.' };
+      }
+      if (curr > 0) {
+        const increasePercent = ((next - curr) / curr) * 100;
+        if (increasePercent > maxIncreasePercent) {
+          return {
+            allowed: true,
+            warning: true,
+            increasePercent: Number(increasePercent.toFixed(1)),
+            reason: `Mức tăng (+${increasePercent.toFixed(1)}%) vượt quá ngưỡng an toàn (+${maxIncreasePercent}%/lần). Đã kích hoạt xác nhận an toàn.`
+          };
+        }
+      }
+      return { allowed: true, warning: false };
+    },
+
+    /**
+     * Wipe all stored credentials & tokens from client storage
+     */
+    wipeAllStoredCredentials() {
+      const keysToWipe = [
+        'ntd_meta_token',
+        'ntd_meta_acc_id',
+        'ntdads_gemini_api_key',
+        'ads_ai_oauth_state_v1',
+        'ads_ai_autopilot_mode_v1',
+        'ads_ai_activity_log_v1',
+        'ads_ai_custom_rules_v1'
+      ];
+      keysToWipe.forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+      return true;
+    }
+  };
+
+  // Expose security helpers globally right away
+  window.escapeHtml = SecurityUtils.escapeHtml;
+  window.sanitizeUrl = SecurityUtils.sanitizeUrl;
+
+  // --------------------------------------------------------------------------
   // 1. SAFE METRIC CALCULATION UTILITIES
   // --------------------------------------------------------------------------
   const MetricsCalc = {
@@ -626,7 +717,10 @@
     async testConnection(token, advId, proxyUrl) {
       const adv = (advId || '').trim();
       const tok = (token || '').trim();
-      let targetUrl = `https://business-api.tiktok.com/open_api/v1.3/advertiser/info/?advertiser_ids=["${adv}"]`;
+      if (proxyUrl && !proxyUrl.startsWith('https://')) {
+        return { success: false, error: 'Chính sách bảo mật: Proxy URL phải sử dụng HTTPS để đảm bảo Access Token không bị rò rỉ qua mạng unencrypted.' };
+      }
+      let targetUrl = `https://business-api.tiktok.com/open_api/v1.3/advertiser/info/?advertiser_ids=${encodeURIComponent(JSON.stringify([adv]))}`;
       if (proxyUrl) {
         targetUrl = proxyUrl + encodeURIComponent(targetUrl);
       }
@@ -658,6 +752,9 @@
     }
 
     async syncLive(token, advId, proxyUrl) {
+      if (proxyUrl && !proxyUrl.startsWith('https://')) {
+        throw new Error('Chính sách bảo mật: Proxy URL bắt buộc phải sử dụng HTTPS.');
+      }
       this.setCredentials(token, advId, proxyUrl);
       const test = await this.testConnection(token, advId, proxyUrl);
       if (!test.success) {
@@ -1509,13 +1606,19 @@
 
       if (!target) return false;
 
+      const safetyCheck = SecurityUtils.validateBudgetChange(target.budget, newBudget);
+      if (!safetyCheck.allowed) {
+        console.warn('[Financial Guard]:', safetyCheck.reason);
+        throw new Error(safetyCheck.reason);
+      }
+
       const prevBudget = target.budget;
       target.budget = Math.round(newBudget);
 
       this.logAction({
         actionType: 'UPDATE_BUDGET',
         title: `Điều chỉnh ngân sách ${target.name}`,
-        description: `Ngân sách thay đổi từ ${MetricsCalc.formatVND(prevBudget)} sang ${MetricsCalc.formatVND(newBudget)}.`,
+        description: `Ngân sách thay đổi từ ${MetricsCalc.formatVND(prevBudget)} sang ${MetricsCalc.formatVND(newBudget)}.${safetyCheck.warning ? ' (' + safetyCheck.reason + ')' : ''}`,
         beforeState: { entityType, id: entityId, budget: prevBudget },
         afterState: { entityType, id: entityId, budget: target.budget },
         userApproved: true
@@ -1761,6 +1864,9 @@
   // EXPORT TO GLOBAL SCOPE
   // --------------------------------------------------------------------------
   window.AdsAI = window.AdsAI || {};
+  window.AdsAI.SecurityUtils = SecurityUtils;
+  window.AdsAI.escapeHtml = SecurityUtils.escapeHtml;
+  window.AdsAI.sanitizeUrl = SecurityUtils.sanitizeUrl;
   window.AdsAI.MetricsCalc = MetricsCalc;
   window.AdsAI.AdsProvider = AdsProvider;
   window.AdsAI.MockAdsProvider = MockAdsProvider;

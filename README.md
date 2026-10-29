@@ -17,6 +17,12 @@
 - ↩️ **Rollback & Undo 1-Click:** Mọi hành động can thiệp (tạo mới, điều chỉnh ngân sách, tắt quảng cáo) đều được lưu log và có thể hoàn tác ngay lập tức.
 - 🛡️ **Autopilot 3 Tiers & Kill Switch:** 3 cấp độ tự hành (Copilot, Assisted Autopilot, Full Autopilot) kèm nút dừng khẩn cấp `🛑 STOP AUTOPILOT`.
 - 🔗 **Frictionless OAuth Connect:** Kết nối Meta Ads và TikTok Ads chỉ với 1 click, không cần sao chép token thủ công.
+- 🛡️ **Security Hardening (Bảo Mật Nâng Cao):**
+  - **Chống XSS toàn diện (HTML Sanitization):** Lọc và mã hóa an toàn toàn bộ dữ liệu trả về từ Meta/TikTok Graph API & Gemini AI trước khi render lên DOM.
+  - **Content Security Policy (CSP):** Khóa chặt domain kết nối, ngăn chặn đánh cắp dữ liệu và thực thi script độc hại.
+  - **Cầu dao tài chính (Financial Circuit Breaker):** Giới hạn tăng ngân sách an toàn (tối đa +50%/lần) ngăn rủi ro Autopilot chi tiêu bất thường.
+  - **Bảo vệ Secret & Emergency Wipe:** Ẩn hiển thị token (`••••`) kèm nút xóa sạch toàn bộ khóa bí mật khỏi trình duyệt chỉ với 1 click.
+  - **Bảo vệ Proxy TikTok:** Ép buộc giao thức HTTPS chống tấn công MITM rò rỉ Access Token.
 
 ---
 

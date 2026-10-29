@@ -3,6 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Content Security Policy (CSP) for Enhanced Defense-in-Depth -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com data:;
+    img-src 'self' data: https: blob:;
+    connect-src 'self' https://graph.facebook.com https://generativelanguage.googleapis.com https://business-api.tiktok.com;
+    object-src 'none';
+    base-uri 'self';
+  ">
   <title>NTDAds — AI Marketing Agent (Meta Ads & TikTok Ads)</title>
   
   <!-- Tailwind CSS CDN -->
@@ -2132,14 +2143,52 @@
             <div class="space-y-2 pt-2">
               <label class="font-bold text-slate-700 block text-[11px]">Google Gemini API Key</label>
               <div class="flex items-center gap-2">
-                <input id="inputGeminiApiKey" type="password" placeholder="Dán khóa AIzaSy... vào đây để kích hoạt AI" class="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none font-mono text-xs focus:ring-2 focus:ring-purple-500 bg-white" />
+                <div class="relative flex-1">
+                  <input id="inputGeminiApiKey" type="password" placeholder="Dán khóa AIzaSy... vào đây để kích hoạt AI" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 pr-10 outline-none font-mono text-xs focus:ring-2 focus:ring-purple-500 bg-white" />
+                  <button type="button" onclick="window.toggleSecretInputVisibility('inputGeminiApiKey', this)" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs" title="Hiện/Ẩn">👁️</button>
+                </div>
                 <button onclick="window.saveGeminiApiKey()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition shadow-xs text-xs whitespace-nowrap">
                   Lưu & Kích hoạt
                 </button>
               </div>
               <div class="flex items-center justify-between text-[11px] text-slate-400">
                 <span>Chưa có khóa? Lấy miễn phí tại: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-purple-600 hover:underline font-semibold">Google AI Studio ↗</a></span>
-                <span class="text-emerald-600 font-semibold">✓ Khóa được mã hóa lưu an toàn tại máy của bạn</span>
+                <span class="text-purple-700 font-semibold">🔒 Lưu an toàn trên trình duyệt của bạn (Local Only)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Security & Safety Hardening Section -->
+          <div class="space-y-3 pt-2">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div>
+                <h3 class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                  <span>🛡️</span> <span>Trung Tâm An Toàn & Bảo Mật (Security Hardening)</span>
+                </h3>
+                <p class="text-[11px] text-slate-500">Bảo vệ tài khoản, kiểm soát chi tiêu và ngăn chặn rò rỉ mã Access Token.</p>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ✓ CSP & XSS Shield Bật
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <span class="font-bold text-xs text-slate-800 block">⚡ Cầu Dao Ngân Sách (Financial Circuit Breaker)</span>
+                <p class="text-[11px] text-slate-500">Giới hạn mức tăng ngân sách tối đa của Autopilot trong 1 lần thực thi để tránh cháy tài khoản.</p>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-semibold text-slate-600">Mức trần:</span>
+                  <span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold text-xs font-mono">+50% / lần</span>
+                  <span class="text-[10px] text-slate-400">(Tự động kích hoạt duyệt 2 bước nếu vượt)</span>
+                </div>
+              </div>
+
+              <div class="p-3.5 bg-rose-50/60 rounded-2xl border border-rose-200 space-y-2">
+                <span class="font-bold text-xs text-rose-900 block">🛑 Hủy & Xóa Sạch Khóa Bí Mật (Emergency Wipe)</span>
+                <p class="text-[11px] text-rose-700">Xóa vĩnh viễn Meta Token, TikTok Token và Gemini Key khỏi máy khi đổi thiết bị hoặc xong việc.</p>
+                <button type="button" onclick="window.wipeAllStoredSecrets()" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition text-xs flex items-center gap-1.5 shadow-2xs">
+                  <span>🗑️</span> <span>Xóa Sạch Tất Cả Khóa & Token</span>
+                </button>
               </div>
             </div>
           </div>
@@ -2223,7 +2272,10 @@
         <div>
           <label class="font-bold text-slate-700 block mb-1">Meta User Access Token</label>
           <div class="flex gap-2">
-            <input id="metaInputToken" type="password" placeholder="Dán mã EAABw... vào đây" class="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs" />
+            <div class="relative flex-1">
+              <input id="metaInputToken" type="password" placeholder="Dán mã EAABw... vào đây" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 pr-10 outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs" />
+              <button type="button" onclick="window.toggleSecretInputVisibility('metaInputToken', this)" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs" title="Hiện/Ẩn">👁️</button>
+            </div>
             <button type="button" onclick="window.fetchMyAdAccounts()" class="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl text-xs whitespace-nowrap transition border border-blue-200 flex items-center gap-1.5 shadow-2xs">
               🔍 Tự tìm tài khoản
             </button>
@@ -2271,7 +2323,10 @@
       <div class="space-y-3">
         <div>
           <label class="font-bold text-slate-700 block mb-1">TikTok Access Token</label>
-          <input id="tiktokInputToken" type="password" placeholder="Nhập access token từ TikTok Business..." class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-rose-500 font-mono" />
+          <div class="relative">
+            <input id="tiktokInputToken" type="password" placeholder="Nhập access token từ TikTok Business..." class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 pr-10 outline-none focus:ring-2 focus:ring-rose-500 font-mono text-xs" />
+            <button type="button" onclick="window.toggleSecretInputVisibility('tiktokInputToken', this)" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs" title="Hiện/Ẩn">👁️</button>
+          </div>
         </div>
 
         <div>
@@ -2745,6 +2800,9 @@
           return;
         }
 
+        // Helper to escape HTML in modals
+        const esc = window.escapeHtml || (s => (s == null ? '' : String(s)));
+
         selectBox.innerHTML = '<option value="">-- Chọn tài khoản quảng cáo của bạn --</option>';
         res.accounts.forEach(acc => {
           const opt = document.createElement('option');
@@ -2759,10 +2817,11 @@
         inputAcc.value = res.accounts[0].id;
 
         resBox.className = "p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 block";
-        resBox.innerHTML = `✅ <strong>Tìm thấy ${res.accounts.length} tài khoản quảng cáo!</strong><br>Đã tự động chọn: <strong>${res.accounts[0].name}</strong> (<code>${res.accounts[0].id}</code>).<br>👉 Bây giờ bạn có thể bấm <strong>"Kiểm tra kết nối"</strong> hoặc <strong>"Đồng bộ Dữ liệu Thật"</strong> ngay bên dưới.`;
+        resBox.innerHTML = `✅ <strong>Tìm thấy ${res.accounts.length} tài khoản quảng cáo!</strong><br>Đã tự động chọn: <strong>${esc(res.accounts[0].name)}</strong> (<code>${esc(res.accounts[0].id)}</code>).<br>👉 Bây giờ bạn có thể bấm <strong>"Kiểm tra kết nối"</strong> hoặc <strong>"Đồng bộ Dữ liệu Thật"</strong> ngay bên dưới.`;
       } else {
+        const esc = window.escapeHtml || (s => (s == null ? '' : String(s)));
         resBox.className = "p-3 rounded-xl bg-rose-50 text-rose-900 border border-rose-200 block";
-        resBox.innerHTML = `❌ <strong>Lỗi khi tìm tài khoản:</strong> ${res.error}`;
+        resBox.innerHTML = `❌ <strong>Lỗi khi tìm tài khoản:</strong> ${esc(res.error)}`;
       }
     };
 
@@ -2777,6 +2836,7 @@
       const token = document.getElementById('metaInputToken').value.trim();
       const acc = document.getElementById('metaInputAccId').value.trim();
       const resBox = document.getElementById('metaTestResultBox');
+      const esc = window.escapeHtml || (s => (s == null ? '' : String(s)));
       resBox.classList.remove('hidden');
 
       if (!token) {
@@ -2797,12 +2857,12 @@
       const res = await window.app.dataEngine.metaProvider.testConnection(token, acc);
       if (res.success) {
         resBox.className = "p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 block";
-        resBox.innerHTML = `✅ <strong>Kết nối thành công!</strong> Tài khoản: <strong>${res.accountName}</strong> (${res.currency}) • Múi giờ: ${res.timezone}.<br>👉 Hãy bấm <strong>"Đồng bộ Dữ liệu Thật"</strong> để tải các chiến dịch về app!`;
+        resBox.innerHTML = `✅ <strong>Kết nối thành công!</strong> Tài khoản: <strong>${esc(res.accountName)}</strong> (${esc(res.currency)}) • Múi giờ: ${esc(res.timezone)}.<br>👉 Hãy bấm <strong>"Đồng bộ Dữ liệu Thật"</strong> để tải các chiến dịch về app!`;
         localStorage.setItem('ntd_meta_token', token);
         localStorage.setItem('ntd_meta_acc_id', acc);
       } else {
         resBox.className = "p-3 rounded-xl bg-rose-50 text-rose-900 border border-rose-200 block";
-        resBox.innerHTML = `❌ <strong>Lỗi kết nối:</strong> ${res.error}`;
+        resBox.innerHTML = `❌ <strong>Lỗi kết nối:</strong> ${esc(res.error)}`;
       }
     };
 
@@ -2837,6 +2897,7 @@
       const token = document.getElementById('tiktokInputToken').value.trim();
       const adv = document.getElementById('tiktokInputAdvId').value.trim();
       const resBox = document.getElementById('tiktokTestResultBox');
+      const esc = window.escapeHtml || (s => (s == null ? '' : String(s)));
       resBox.classList.remove('hidden');
 
       if (!token) {
@@ -2851,10 +2912,10 @@
       const res = await window.app.dataEngine.tiktokProvider.testConnection(token, adv);
       if (res.success) {
         resBox.className = "p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 block";
-        resBox.innerHTML = `✅ <strong>Kết nối thành công!</strong> Tài khoản TikTok: <strong>${res.accountName}</strong>.`;
+        resBox.innerHTML = `✅ <strong>Kết nối thành công!</strong> Tài khoản TikTok: <strong>${esc(res.accountName)}</strong>.`;
       } else {
         resBox.className = "p-3 rounded-xl bg-rose-50 text-rose-900 border border-rose-200 block";
-        resBox.innerHTML = `❌ <strong>Lỗi kết nối:</strong> ${res.error}`;
+        resBox.innerHTML = `❌ <strong>Lỗi kết nối:</strong> ${esc(res.error)}`;
       }
     };
 
@@ -2875,6 +2936,33 @@
       } catch (err) {
         alert('Lỗi đồng bộ TikTok: ' + err.message);
       }
+    };
+
+    // Security & Credentials Handlers
+    window.toggleSecretInputVisibility = function(inputId, btn) {
+      const el = document.getElementById(inputId);
+      if (!el) return;
+      if (el.type === 'password') {
+        el.type = 'text';
+        btn.textContent = '🙈';
+      } else {
+        el.type = 'password';
+        btn.textContent = '👁️';
+      }
+    };
+
+    window.wipeAllStoredSecrets = function() {
+      const ok = confirm('⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA SẠCH?\n\nHành động này sẽ xóa vĩnh viễn:\n- Meta Graph API Token & Ad Account ID\n- TikTok Access Token\n- Google Gemini AI API Key\n- Toàn bộ Logs & State trên trình duyệt này.\n\nSau khi xóa, ứng dụng sẽ trở về trạng thái trắng an toàn.');
+      if (!ok) return;
+
+      if (window.AdsAI && window.AdsAI.SecurityUtils) {
+        window.AdsAI.SecurityUtils.wipeAllStoredCredentials();
+      } else {
+        ['ntd_meta_token', 'ntd_meta_acc_id', 'ntdads_gemini_api_key', 'ads_ai_oauth_state_v1'].forEach(k => localStorage.removeItem(k));
+      }
+
+      alert('🛡️ Đã xóa sạch toàn bộ khóa và token bí mật thành công!');
+      location.reload();
     };
   </script>
 </body>
